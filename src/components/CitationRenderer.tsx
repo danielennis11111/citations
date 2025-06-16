@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { FileText, ExternalLink, ChevronDown, ChevronRight, Quote, Globe } from 'lucide-react';
+import { FileText, ExternalLink, ChevronDown, ChevronRight, Quote, Globe, Zap, Target, BookOpen } from 'lucide-react';
 import { Citation } from '../types/index';
 
 export interface CitationReference {
@@ -18,6 +18,7 @@ export interface CitationReference {
 interface CitationRendererProps {
   citations: Citation[];
   showRelevanceScores?: boolean;
+  showIncantations?: boolean;
   maxPreviewLength?: number;
   className?: string;
 }
@@ -25,12 +26,14 @@ interface CitationRendererProps {
 interface CitationCardProps {
   citation: Citation;
   showRelevance?: boolean;
+  showIncantation?: boolean;
   maxPreviewLength?: number;
 }
 
 const CitationCard: React.FC<CitationCardProps> = ({ 
   citation, 
   showRelevance = false, 
+  showIncantation = true,
   maxPreviewLength = 200 
 }) => {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -66,6 +69,26 @@ const CitationCard: React.FC<CitationCardProps> = ({
       default:
         return 'border-gray-200 bg-gray-50';
     }
+  };
+  
+  const getIncantationColor = (incantation?: string) => {
+    const colors: Record<string, string> = {
+      'semantic-search': 'bg-blue-100 text-blue-800',
+      'chain-of-thought': 'bg-purple-100 text-purple-800',
+      'expert-persona': 'bg-green-100 text-green-800',
+      'working-backwards': 'bg-orange-100 text-orange-800',
+      'assumption-reversal': 'bg-pink-100 text-pink-800'
+    };
+    return colors[incantation || ''] || 'bg-gray-100 text-gray-800';
+  };
+  
+  const formatIncantation = (incantation?: string) => {
+    if (!incantation) return 'Semantic Search';
+    
+    return incantation
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
   };
   
   const truncatedContent = citation.content.length > maxPreviewLength
@@ -115,6 +138,16 @@ const CitationCard: React.FC<CitationCardProps> = ({
         )}
       </div>
       
+      {/* Incantation Badge (if enabled) */}
+      {showIncantation && citation.incantationUsed && (
+        <div className="mb-2 flex items-center space-x-2">
+          <div className={`px-2 py-1 rounded-full text-xs font-medium flex items-center space-x-1 ${getIncantationColor(citation.incantationUsed)}`}>
+            <Zap className="w-3 h-3" />
+            <span>{formatIncantation(citation.incantationUsed)}</span>
+          </div>
+        </div>
+      )}
+      
       {/* Content */}
       <div className="text-sm text-gray-700 leading-relaxed">
         <p className="whitespace-pre-wrap">{contentToShow}</p>
@@ -138,6 +171,35 @@ const CitationCard: React.FC<CitationCardProps> = ({
           </button>
         )}
       </div>
+      
+      {/* Quality Metrics */}
+      <div className="mt-3 pt-3 border-t border-gray-200">
+        <div className="grid grid-cols-3 gap-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-500">Relevance</span>
+            <div className="flex items-center space-x-1">
+              <Target className="w-3 h-3 text-blue-600" />
+              <span className="font-medium">{Math.round((citation.relevance || 0) * 100)}%</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-500">Quality</span>
+            <div className="flex items-center space-x-1">
+              <BookOpen className="w-3 h-3 text-green-600" />
+              <span className="font-medium">{Math.round((citation.quality || 0) * 100)}%</span>
+            </div>
+          </div>
+          
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-gray-500">Confidence</span>
+            <div className="flex items-center space-x-1">
+              <Target className="w-3 h-3 text-purple-600" />
+              <span className="font-medium">{Math.round((citation.confidence || 0) * 100)}%</span>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 };
@@ -145,6 +207,7 @@ const CitationCard: React.FC<CitationCardProps> = ({
 const CitationRenderer: React.FC<CitationRendererProps> = ({
   citations,
   showRelevanceScores = false,
+  showIncantations = true,
   maxPreviewLength = 200,
   className = ''
 }) => {
@@ -154,6 +217,18 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
   
   // Sort citations by relevance (highest first)
   const sortedCitations = [...citations].sort((a, b) => b.relevance - a.relevance);
+  
+  // Group by incantation if showing incantations
+  const groupedByIncantation = showIncantations 
+    ? sortedCitations.reduce((groups, citation) => {
+        const incantation = citation.incantationUsed || 'semantic-search';
+        if (!groups[incantation]) {
+          groups[incantation] = [];
+        }
+        groups[incantation].push(citation);
+        return groups;
+      }, {} as Record<string, Citation[]>)
+    : { 'all': sortedCitations };
   
   return (
     <div className={`space-y-3 ${className}`}>
@@ -169,16 +244,50 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
         )}
       </div>
       
-      <div className="space-y-2">
-        {sortedCitations.map((citation, index) => (
-          <CitationCard
-            key={citation.id || `citation-${index}`}
-            citation={citation}
-            showRelevance={showRelevanceScores}
-            maxPreviewLength={maxPreviewLength}
-          />
-        ))}
-      </div>
+      {showIncantations ? (
+        // If showing incantations, group by incantation type
+        Object.entries(groupedByIncantation).map(([incantation, citationGroup]) => (
+          <div key={incantation} className="space-y-2">
+            {incantation !== 'all' && (
+              <div className="flex items-center space-x-2 text-xs font-medium text-gray-700 mb-2">
+                <Zap className="w-3 h-3" />
+                <span>
+                  {incantation
+                    .split('-')
+                    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                    .join(' ')} 
+                  ({citationGroup.length})
+                </span>
+              </div>
+            )}
+            
+            <div className="space-y-2">
+              {citationGroup.map((citation, index) => (
+                <CitationCard
+                  key={citation.id || `citation-${incantation}-${index}`}
+                  citation={citation}
+                  showRelevance={showRelevanceScores}
+                  showIncantation={false} // Don't show in card since we're grouping
+                  maxPreviewLength={maxPreviewLength}
+                />
+              ))}
+            </div>
+          </div>
+        ))
+      ) : (
+        // If not showing incantations, just show all citations
+        <div className="space-y-2">
+          {sortedCitations.map((citation, index) => (
+            <CitationCard
+              key={citation.id || `citation-${index}`}
+              citation={citation}
+              showRelevance={showRelevanceScores}
+              showIncantation={showIncantations}
+              maxPreviewLength={maxPreviewLength}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 };

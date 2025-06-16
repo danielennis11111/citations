@@ -30,27 +30,43 @@ export interface RAGResult {
  */
 export function convertRAGResultsToCitations(
   ragResults: RAGResult[], 
-  incantationUsed?: string
+  incantationUsed?: string,
+  queryContext?: string
 ): Citation[] {
-  return ragResults.map((result, index) => ({
-    id: `rag-${result.document.id}-${index}`,
-    source: result.document.name,
-    type: 'rag' as const,
-    content: result.context,
-    relevance: result.relevanceScore,
-    timestamp: result.document.uploadedAt,
-    documentId: result.document.id,
-    incantationUsed: incantationUsed || 'semantic-search',
-    highlightedText: extractHighlightedText(result.context, result.chunk.content),
-    confidence: calculateConfidence(result.relevanceScore, result.context.length),
-    quality: calculateCitationQuality({
+  return ragResults.map((result, index) => {
+    // Calculate quality metrics
+    const relevance = result.relevanceScore;
+    const confidence = calculateConfidence(relevance, result.context.length);
+    const quality = calculateCitationQuality({
       id: `rag-${result.document.id}-${index}`,
       source: result.document.name,
       type: 'rag',
       content: result.context,
-      relevance: result.relevanceScore
-    })
-  }));
+      relevance: relevance
+    });
+    
+    // Extract the most relevant text for highlighting
+    const highlightedText = extractHighlightedText(result.context, result.chunk.content);
+    
+    // Create citation with enhanced metadata
+    return {
+      id: `rag-${result.document.id}-${index}`,
+      source: result.document.name,
+      type: 'rag' as const,
+      content: result.context,
+      relevance: relevance,
+      timestamp: result.document.uploadedAt,
+      documentId: result.document.id,
+      incantationUsed: incantationUsed || 'semantic-search',
+      highlightedText: highlightedText,
+      confidence: confidence,
+      quality: quality,
+      // Add page information if available
+      page: result.chunk.startIndex ? Math.floor(result.chunk.startIndex / 1000) + 1 : undefined,
+      // Add excerpt for tooltips
+      excerpt: highlightedText || result.context.substring(0, 150)
+    };
+  });
 }
 
 /**
@@ -109,13 +125,30 @@ export function parseTextWithHighlighting(
   
   let currentIndex = 0;
   
-  // Simple approach: look for quoted content that matches citation sources
-  // For now, implement a basic version that looks for similar text
-  // In a production system, this would use more sophisticated NLP
+  // Enhanced approach: look for quoted content that matches citation sources
+  // For production systems, consider using more sophisticated NLP or embedding similarity
   
   for (const citation of citations) {
     const highlightText = citation.highlightedText || citation.content.substring(0, 100);
-    const matchIndex = text.toLowerCase().indexOf(highlightText.toLowerCase().substring(0, 50));
+    
+    // Try to find an exact match first (case insensitive)
+    let matchIndex = text.toLowerCase().indexOf(highlightText.toLowerCase().substring(0, Math.min(50, highlightText.length)));
+    
+    // If no exact match, try fuzzy matching with key phrases
+    if (matchIndex === -1) {
+      // Extract key phrases (4+ word sequences)
+      const keyPhrases = extractKeyPhrases(highlightText);
+      
+      for (const phrase of keyPhrases) {
+        if (phrase.length >= 15) { // Only use substantial phrases
+          const phraseIndex = text.toLowerCase().indexOf(phrase.toLowerCase());
+          if (phraseIndex !== -1) {
+            matchIndex = phraseIndex;
+            break;
+          }
+        }
+      }
+    }
     
     if (matchIndex !== -1 && matchIndex >= currentIndex) {
       // Add non-highlighted text before this match
@@ -164,6 +197,33 @@ export function parseTextWithHighlighting(
   }
   
   return { segments, references };
+}
+
+/**
+ * Extract key phrases from text for better matching
+ */
+function extractKeyPhrases(text: string): string[] {
+  const phrases: string[] = [];
+  
+  // Simple implementation: split by common delimiters and get phrases with 4+ words
+  const sentences = text.split(/[.!?;]+/).map(s => s.trim()).filter(s => s.length > 0);
+  
+  for (const sentence of sentences) {
+    const words = sentence.split(/\s+/);
+    if (words.length >= 4) {
+      phrases.push(sentence);
+      
+      // Also add sub-phrases for better matching
+      if (words.length > 6) {
+        for (let i = 0; i <= words.length - 4; i++) {
+          const subPhrase = words.slice(i, i + 4).join(' ');
+          phrases.push(subPhrase);
+        }
+      }
+    }
+  }
+  
+  return phrases;
 }
 
 /**
@@ -251,29 +311,33 @@ export function extractRelevantQuotes(
         return acc + (sentence.toLowerCase().includes(term) ? 1 : 0);
       }, 0);
       
-      if (score > bestScore || (score === bestScore && sentence.length < bestMatch.length)) {
+      // Prefer sentences with more query terms
+      if (score > bestScore) {
         bestScore = score;
         bestMatch = sentence;
       }
     }
     
-    // If no good match found, use beginning of content
-    if (!bestMatch || bestScore === 0) {
-      bestMatch = citation.content.substring(0, maxQuoteLength);
-      if (citation.content.length > maxQuoteLength) {
-        bestMatch += '...';
-      }
+    // If no good match found, use the first sentence
+    if (bestMatch.length === 0 && sentences.length > 0) {
+      bestMatch = sentences[0];
     }
     
+    // Truncate if too long
+    if (bestMatch.length > maxQuoteLength) {
+      bestMatch = bestMatch.substring(0, maxQuoteLength) + '...';
+    }
+    
+    // Return citation with the best excerpt
     return {
       ...citation,
-      content: bestMatch
+      excerpt: bestMatch
     };
   });
 }
 
 /**
- * Create citation markers for text based on RAG results
+ * Insert citation markers into text
  */
 export function insertCitationMarkers(
   text: string, 
@@ -285,65 +349,60 @@ export function insertCitationMarkers(
   const citations = convertRAGResultsToCitations(ragResults);
   let textWithCitations = text;
   
-  // For now, append citation numbers at the end of relevant sentences
-  // This is a simple implementation - could be enhanced with NLP
-  citations.forEach((citation, index) => {
-    const citationNumber = index + 1;
-    const marker = ` [${citationNumber}]`;
-    
-    // Try to find a good place to insert the citation marker
-    // Look for sentences that contain similar content
-    const sentences = textWithCitations.split(/([.!?]+)/);
-    
-    for (let i = 0; i < sentences.length; i += 2) { // Every other element is a sentence
-      const sentence = sentences[i];
-      if (sentence && sentence.trim().length > 10) {
-        // Simple similarity check - could be enhanced
-        const sentenceLower = sentence.toLowerCase();
-        const citationWords = citation.content.toLowerCase().split(/\s+/).slice(0, 5);
-        
-        const matchCount = citationWords.reduce((count, word) => {
-          return count + (sentenceLower.includes(word) ? 1 : 0);
-        }, 0);
-        
-        if (matchCount >= 2) {
-          sentences[i] = sentence + marker;
-          break;
-        }
-      }
-    }
-    
-    textWithCitations = sentences.join('');
-  });
+  // Insert citation markers at the end of sentences
+  const sentences = text.split(/([.!?]+\s)/).filter(s => s.trim().length > 0);
+  let currentIndex = 0;
   
-  return {
-    textWithCitations,
-    citations
-  };
+  for (let i = 0; i < Math.min(sentences.length, citations.length); i++) {
+    const sentence = sentences[i];
+    currentIndex += sentence.length;
+    
+    // Add citation marker after sentence
+    textWithCitations = 
+      textWithCitations.substring(0, currentIndex) + 
+      ` [${i + 1}]` + 
+      textWithCitations.substring(currentIndex);
+    
+    // Update index for next insertion
+    currentIndex += 4; // Length of " [n]"
+  }
+  
+  return { textWithCitations, citations };
 }
 
 /**
  * Generate a bibliography from citations
  */
 export function generateBibliography(citations: Citation[]): string {
-  const sortedCitations = [...citations].sort((a, b) => a.source.localeCompare(b.source));
+  if (citations.length === 0) return '';
   
-  return sortedCitations.map((citation, index) => {
-    const number = index + 1;
-    const date = citation.timestamp ? citation.timestamp.toLocaleDateString() : 'Unknown date';
+  let bibliography = '## Sources\n\n';
+  
+  citations.forEach((citation, index) => {
+    const formattedDate = citation.timestamp ? 
+      citation.timestamp.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : 
+      'n.d.';
     
-    switch (citation.type) {
-      case 'rag':
-      case 'document':
-        return `${number}. ${citation.source}. ${date}. Retrieved from uploaded document.`;
-      case 'external':
-        return `${number}. ${citation.source}. ${date}. ${citation.url || 'External source'}.`;
-      case 'knowledge':
-        return `${number}. ${citation.source}. Internal knowledge base.`;
-      default:
-        return `${number}. ${citation.source}. ${date}.`;
+    bibliography += `[${index + 1}] ${citation.source}`;
+    
+    if (citation.page) {
+      bibliography += `, p. ${citation.page}`;
     }
-  }).join('\n');
+    
+    if (citation.documentId) {
+      bibliography += ` (Document ID: ${citation.documentId})`;
+    }
+    
+    bibliography += `. Retrieved on ${formattedDate}`;
+    
+    if (citation.url) {
+      bibliography += ` from ${citation.url}`;
+    }
+    
+    bibliography += '\n\n';
+  });
+  
+  return bibliography;
 }
 
 /**
@@ -355,11 +414,7 @@ export function filterAndRankCitations(
   maxCitations: number = 5
 ): Citation[] {
   return citations
-    .map(citation => ({
-      ...citation,
-      quality: calculateCitationQuality(citation)
-    }))
-    .filter(citation => citation.quality >= minQuality)
-    .sort((a, b) => b.quality - a.quality)
+    .filter(citation => (citation.quality || 0) >= minQuality)
+    .sort((a, b) => (b.quality || 0) - (a.quality || 0))
     .slice(0, maxCitations);
 } 

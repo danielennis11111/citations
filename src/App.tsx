@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import ConversationHub from './components/ConversationHub';
+import CitationDemo from './components/CitationDemo';
 
 function App() {
   return (
@@ -8,6 +9,7 @@ function App() {
       <div className="App">
         <Routes>
           <Route path="/" element={<ConversationHub />} />
+          <Route path="/citations" element={<CitationDemo />} />
         </Routes>
       </div>
     </Router>
