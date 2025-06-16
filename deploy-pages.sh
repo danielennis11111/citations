@@ -92,7 +92,7 @@ fi
 echo ""
 echo -e "${GREEN}🎉 Deployment complete!${NC}"
 echo "=================================================="
-echo -e "${GREEN}✅ Site URL: https://danielennis11111.github.io/rate-limiter/${NC}"
+echo -e "${GREEN}✅ Site URL: https://danielennis11111.github.io/citations/${NC}"
 echo -e "${GREEN}✅ Demo Mode: API keys excluded for security${NC}"
 echo -e "${GREEN}✅ Available Models: Local Llama models only${NC}"
 echo ""

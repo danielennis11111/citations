@@ -1,12 +1,9 @@
-name: Deploy to GitHub Pages (DISABLED - Using gh-pages branch method)
-
-# This workflow is disabled in favor of the traditional gh-pages branch deployment
-# Use the deploy-pages.sh script instead
+name: Deploy to GitHub Pages
 
 on:
-  # push:
-  #   branches: [ main ]
-  workflow_dispatch: # Allow manual trigger only
+  push:
+    branches: [ main ]
+  workflow_dispatch: # Allow manual trigger
 
 permissions:
   contents: read
@@ -16,7 +13,6 @@ permissions:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: false # Disable this workflow
     
     steps:
     - name: Checkout code
