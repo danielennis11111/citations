@@ -295,6 +295,9 @@ const SimpleTabs = ({ value, onValueChange, children, className = '' }: any) => 
   return (
     <div className={className}>
       {React.Children.map(children, (child) => {
+        // Skip null or undefined children
+        if (!child) return null;
+        
         if (child.type === SimpleTabsList || (child.type === SimpleTabsContent && child.props.value === value)) {
           return React.cloneElement(child, { activeTab: value, onTabChange: onValueChange });
         }
@@ -308,6 +311,9 @@ const SimpleTabsList = ({ children, activeTab, onTabChange }: any) => {
   return (
     <div className="flex space-x-1 border-b border-gray-200">
       {React.Children.map(children, (child) => {
+        // Skip null or undefined children
+        if (!child) return null;
+        
         return React.cloneElement(child, { 
           active: child.props.value === activeTab,
           onClick: () => onTabChange(child.props.value)
