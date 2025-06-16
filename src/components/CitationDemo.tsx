@@ -10,7 +10,6 @@ import CitationRenderer from './CitationRenderer';
 import HighlightedText from './HighlightedText';
 import RAGDiscoveryPanel from './RAGDiscoveryPanel';
 import { parseTextWithHighlighting } from '../utils/citationParser';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { FileText, Zap, Search, BookOpen } from 'lucide-react';
 
 // Mock data for demonstration
@@ -182,29 +181,29 @@ const CitationDemo: React.FC = () => {
           Interactive demonstration of the citation system with highlighting, tooltips, and discovery tracking.
         </p>
         
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <TabsList>
-            <TabsTrigger value="highlighted">
+        <SimpleTabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
+          <SimpleTabsList>
+            <SimpleTabsTrigger value="highlighted">
               <FileText className="w-4 h-4 mr-2" />
               Highlighted Text
-            </TabsTrigger>
-            <TabsTrigger value="citations">
+            </SimpleTabsTrigger>
+            <SimpleTabsTrigger value="citations">
               <BookOpen className="w-4 h-4 mr-2" />
               Citations
-            </TabsTrigger>
-            <TabsTrigger value="discoveries">
+            </SimpleTabsTrigger>
+            <SimpleTabsTrigger value="discoveries">
               <Zap className="w-4 h-4 mr-2" />
               Discoveries
-            </TabsTrigger>
+            </SimpleTabsTrigger>
             {selectedDiscovery && (
-              <TabsTrigger value="discovery-detail">
+              <SimpleTabsTrigger value="discovery-detail">
                 <Search className="w-4 h-4 mr-2" />
                 Discovery Detail
-              </TabsTrigger>
+              </SimpleTabsTrigger>
             )}
-          </TabsList>
+          </SimpleTabsList>
           
-          <TabsContent value="highlighted" className="mt-4">
+          <SimpleTabsContent value="highlighted" className="mt-4">
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h2 className="text-lg font-medium text-gray-900 mb-3">AI Response with Citation Highlighting</h2>
               <div className="prose prose-blue max-w-none">
@@ -219,9 +218,9 @@ const CitationDemo: React.FC = () => {
                 <p>👆 Try clicking on the highlighted text to see citation details</p>
               </div>
             </div>
-          </TabsContent>
+          </SimpleTabsContent>
           
-          <TabsContent value="citations" className="mt-4">
+          <SimpleTabsContent value="citations" className="mt-4">
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h2 className="text-lg font-medium text-gray-900 mb-3">Citations</h2>
               <CitationRenderer
@@ -230,9 +229,9 @@ const CitationDemo: React.FC = () => {
                 showIncantations={true}
               />
             </div>
-          </TabsContent>
+          </SimpleTabsContent>
           
-          <TabsContent value="discoveries" className="mt-4">
+          <SimpleTabsContent value="discoveries" className="mt-4">
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
               <h2 className="text-lg font-medium text-gray-900 mb-3">RAG Discoveries</h2>
               <RAGDiscoveryPanel
@@ -240,10 +239,10 @@ const CitationDemo: React.FC = () => {
                 onDiscoveryClick={handleDiscoveryClick}
               />
             </div>
-          </TabsContent>
+          </SimpleTabsContent>
           
           {selectedDiscovery && (
-            <TabsContent value="discovery-detail" className="mt-4">
+            <SimpleTabsContent value="discovery-detail" className="mt-4">
               <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-medium text-gray-900">Discovery Detail</h2>
@@ -274,9 +273,9 @@ const CitationDemo: React.FC = () => {
                   <p>Discovery made on {selectedDiscovery.timestamp.toLocaleString()}</p>
                 </div>
               </div>
-            </TabsContent>
+            </SimpleTabsContent>
           )}
-        </Tabs>
+        </SimpleTabs>
         
         <div className="border-t border-gray-200 pt-4 mt-6">
           <h3 className="text-sm font-medium text-gray-900 mb-2">About This Demo</h3>
@@ -292,11 +291,11 @@ const CitationDemo: React.FC = () => {
 };
 
 // Simple UI components for the demo
-const Tabs = ({ value, onValueChange, children, className = '' }: any) => {
+const SimpleTabs = ({ value, onValueChange, children, className = '' }: any) => {
   return (
     <div className={className}>
       {React.Children.map(children, (child) => {
-        if (child.type === TabsList || (child.type === TabsContent && child.props.value === value)) {
+        if (child.type === SimpleTabsList || (child.type === SimpleTabsContent && child.props.value === value)) {
           return React.cloneElement(child, { activeTab: value, onTabChange: onValueChange });
         }
         return null;
@@ -305,7 +304,7 @@ const Tabs = ({ value, onValueChange, children, className = '' }: any) => {
   );
 };
 
-const TabsList = ({ children, activeTab, onTabChange }: any) => {
+const SimpleTabsList = ({ children, activeTab, onTabChange }: any) => {
   return (
     <div className="flex space-x-1 border-b border-gray-200">
       {React.Children.map(children, (child) => {
@@ -318,7 +317,7 @@ const TabsList = ({ children, activeTab, onTabChange }: any) => {
   );
 };
 
-const TabsTrigger = ({ value, active, onClick, children }: any) => {
+const SimpleTabsTrigger = ({ value, active, onClick, children }: any) => {
   return (
     <button
       className={`flex items-center px-4 py-2 text-sm font-medium ${
@@ -333,7 +332,7 @@ const TabsTrigger = ({ value, active, onClick, children }: any) => {
   );
 };
 
-const TabsContent = ({ value, children }: any) => {
+const SimpleTabsContent = ({ value, children }: any) => {
   return <div>{children}</div>;
 };
 

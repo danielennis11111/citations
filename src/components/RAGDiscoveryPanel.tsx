@@ -6,7 +6,7 @@
  */
 
 import React, { useState } from 'react';
-import { Search, Zap, FileText, Clock, Target, TrendingUp, ChevronDown, ChevronRight, BookOpen, BarChart } from 'lucide-react';
+import { Search, Zap, FileText, Clock, Target, TrendingUp, ChevronDown, ChevronRight, BookOpen, BarChart, ChevronUp } from 'lucide-react';
 import { RAGDiscovery } from '../types/index';
 
 interface RAGDiscoveryPanelProps {
