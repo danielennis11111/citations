@@ -50,6 +50,19 @@ class GeminiService {
     try {
       const prompt = this.buildPromptWithCitations(message, context, includeCitations);
       
+      // Log prompt info for debugging
+      console.log('Prompt length:', prompt.length, 'characters');
+      if (prompt.length > 10000) {
+        console.warn('Very long prompt detected, this might cause delays');
+      }
+      
+      // Create AbortController for timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+      
+      console.log('Making Gemini API request...');
+      const startTime = Date.now();
+      
       const response = await fetch(
         `${this.baseUrl}/${this.config.model}:generateContent?key=${this.config.apiKey}`,
         {
@@ -78,9 +91,14 @@ class GeminiService {
                 threshold: 'BLOCK_MEDIUM_AND_ABOVE'
               }
             ]
-          })
+          }),
+          signal: controller.signal
         }
       );
+      
+      clearTimeout(timeoutId);
+      const requestTime = Date.now() - startTime;
+      console.log(`API request completed in ${requestTime}ms`);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -98,8 +116,12 @@ class GeminiService {
       
       return this.parseGeminiResponse(data, message);
     } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        console.error('Gemini API request timed out after 30 seconds');
+        throw new Error('Request timed out. Please try again with a shorter message.');
+      }
       console.error('Gemini API Error:', error);
-      throw new Error(`Failed to get response from Gemini: ${error}`);
+      throw new Error(`Failed to get response from Gemini: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
