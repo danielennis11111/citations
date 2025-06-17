@@ -1,4 +1,43 @@
 /* App styles */
 .App {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-} 
+}
+
+/* ASU Gold Color Scheme - Based on #FFC627 */
+.bg-asu-gold-50 { background-color: #FFFBF0; }
+.bg-asu-gold-100 { background-color: #FFF4E5; }
+.bg-asu-gold-200 { background-color: #FFE8B8; }
+.bg-asu-gold-300 { background-color: #FFDC8B; }
+.bg-asu-gold-400 { background-color: #FFD15E; }
+.bg-asu-gold-500 { background-color: #FFC627; }
+.bg-asu-gold-600 { background-color: #E6B000; }
+.bg-asu-gold-700 { background-color: #B38800; }
+.bg-asu-gold-800 { background-color: #806200; }
+
+.text-asu-gold-50 { color: #FFFBF0; }
+.text-asu-gold-100 { color: #FFF4E5; }
+.text-asu-gold-200 { color: #FFE8B8; }
+.text-asu-gold-300 { color: #FFDC8B; }
+.text-asu-gold-400 { color: #FFD15E; }
+.text-asu-gold-500 { color: #FFC627; }
+.text-asu-gold-600 { color: #E6B000; }
+.text-asu-gold-700 { color: #B38800; }
+.text-asu-gold-800 { color: #806200; }
+
+.border-asu-gold-50 { border-color: #FFFBF0; }
+.border-asu-gold-100 { border-color: #FFF4E5; }
+.border-asu-gold-200 { border-color: #FFE8B8; }
+.border-asu-gold-300 { border-color: #FFDC8B; }
+.border-asu-gold-400 { border-color: #FFD15E; }
+.border-asu-gold-500 { border-color: #FFC627; }
+.border-asu-gold-600 { border-color: #E6B000; }
+.border-asu-gold-700 { border-color: #B38800; }
+.border-asu-gold-800 { border-color: #806200; }
+
+.ring-asu-gold-500 { --tw-ring-color: #FFC627; }
+.focus\:ring-asu-gold-500:focus { --tw-ring-color: #FFC627; }
+.focus\:border-asu-gold-500:focus { border-color: #FFC627; }
+
+.hover\:bg-asu-gold-200:hover { background-color: #FFE8B8; }
+.hover\:bg-asu-gold-700:hover { background-color: #B38800; }
+.hover\:text-asu-gold-600:hover { color: #E6B000; } 

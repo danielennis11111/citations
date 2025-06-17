@@ -183,7 +183,7 @@ const CitationTooltip: React.FC<{
   return (
     <>
       <span
-        className="bg-blue-100 border-b-2 border-blue-400 cursor-pointer hover:bg-blue-200 transition-colors px-1 rounded relative"
+        className="bg-asu-gold-100 border-b-2 border-asu-gold-500 cursor-pointer hover:bg-asu-gold-200 transition-colors px-1 rounded relative"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         onClick={handleClick}
@@ -204,9 +204,9 @@ const CitationTooltip: React.FC<{
         >
           <div className="flex items-start space-x-2 mb-2">
             {citation.type === 'web' ? (
-              <Globe className="w-4 h-4 text-blue-600 mt-0.5" />
+              <Globe className="w-4 h-4 text-asu-gold-600 mt-0.5" />
             ) : (
-              <FileText className="w-4 h-4 text-blue-600 mt-0.5" />
+              <FileText className="w-4 h-4 text-asu-gold-600 mt-0.5" />
             )}
             <div className="flex-1 min-w-0">
               <h4 className="text-sm font-semibold text-gray-900 truncate">
@@ -366,7 +366,7 @@ const CitationDemo: React.FC = () => {
         <header className="bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-3">
-              <MessageSquare className="w-7 h-7 text-blue-600" />
+              <MessageSquare className="w-7 h-7 text-asu-gold-600" />
               <div>
                 <h1 className="text-xl font-bold text-gray-900">Cookie Recipe Chat</h1>
                 <p className="text-sm text-gray-600">Interactive citations • Hover over highlighted text</p>
@@ -375,7 +375,7 @@ const CitationDemo: React.FC = () => {
             
             <button
               onClick={() => setSidebarVisible(!sidebarVisible)}
-              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200 transition-colors"
+              className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-asu-gold-100 text-asu-gold-800 border border-asu-gold-200 hover:bg-asu-gold-200 transition-colors"
             >
               {sidebarVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               <span>{sidebarVisible ? 'Hide' : 'Show'} Sources</span>
@@ -390,7 +390,7 @@ const CitationDemo: React.FC = () => {
               <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] flex space-x-3 ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
                   <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    message.role === 'user' ? 'bg-blue-600' : 'bg-gray-600'
+                    message.role === 'user' ? 'bg-asu-gold-600' : 'bg-gray-600'
                   }`}>
                     {message.role === 'user' ? (
                       <User className="w-4 h-4 text-white" />
@@ -401,7 +401,7 @@ const CitationDemo: React.FC = () => {
                   
                   <div className={`rounded-lg p-4 ${
                     message.role === 'user' 
-                      ? 'bg-blue-600 text-white' 
+                      ? 'bg-asu-gold-600 text-white' 
                       : 'bg-white border border-gray-200'
                   }`}>
                     <div className="text-sm leading-relaxed">
@@ -441,12 +441,12 @@ const CitationDemo: React.FC = () => {
               onChange={(e) => setCurrentMessage(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
               placeholder="Ask about baking techniques, ingredients, or recipes..."
-              className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              className="flex-1 border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-asu-gold-500 focus:border-asu-gold-500"
             />
             <button
               onClick={handleSendMessage}
               disabled={!currentMessage.trim()}
-              className="bg-blue-600 text-white p-3 rounded-lg hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+              className="bg-asu-gold-600 text-white p-3 rounded-lg hover:bg-asu-gold-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
             >
               <Send className="w-5 h-5" />
             </button>
@@ -460,7 +460,7 @@ const CitationDemo: React.FC = () => {
           <div className="flex flex-col h-full">
             <div className="border-b border-gray-200 p-4">
               <div className="flex items-center space-x-2">
-                <BookOpen className="w-5 h-5 text-blue-600" />
+                <BookOpen className="w-5 h-5 text-asu-gold-600" />
                 <h3 className="text-lg font-medium text-gray-900">
                   Sources ({allCitations.length})
                 </h3>
@@ -470,10 +470,10 @@ const CitationDemo: React.FC = () => {
 
             <div className="flex-1 overflow-auto p-4 space-y-4">
               {allCitations.map((citation) => (
-                <div key={citation.id} className="border border-blue-200 bg-blue-50 rounded-lg p-4">
+                                 <div key={citation.id} className="border border-asu-gold-200 bg-asu-gold-50 rounded-lg p-4">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center space-x-2 flex-1 min-w-0">
-                      <Globe className="w-4 h-4 text-blue-600" />
+                                                                                             <Globe className="w-4 h-4 text-asu-gold-600" />
                       <h4 className="text-sm font-medium text-gray-900 truncate">
                         {citation.source}
                       </h4>
@@ -483,7 +483,7 @@ const CitationDemo: React.FC = () => {
                         href={citation.url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-gray-400 hover:text-blue-600 transition-colors"
+                        className="text-gray-400 hover:text-asu-gold-600 transition-colors"
                       >
                         <ExternalLink className="w-4 h-4" />
                       </a>
