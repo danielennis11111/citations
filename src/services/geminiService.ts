@@ -123,35 +123,45 @@ FORMATTING REQUIREMENTS:
 4. Use *italics* for emphasis and examples
 5. Structure your response with clear sections and proper spacing
 
-CITATION REQUIREMENTS:
-When you make factual claims, you MUST provide specific, verifiable sources using this exact format:
-[Source: Article/Paper Title | URL: https://example.com | Date: YYYY-MM-DD | Confidence: High/Medium/Low]
+CITATION REQUIREMENTS - CRITICAL FOR ACCURACY:
+When you reference information from sources, you MUST use INLINE citations that mark the EXACT text that comes from each source. Use this format:
 
-EXAMPLE FORMAT:
+**INLINE CITATION FORMAT:**
+[CITE:1]Specific text or claim that comes directly from the source[/CITE:1]
+
+**SOURCE REFERENCE FORMAT:**
+[Source:1 | Title: Article/Paper Title | URL: https://example.com | Date: YYYY-MM-DD | Confidence: High/Medium/Low]
+
+EXAMPLE OF PROPER INLINE CITATIONS:
 ## **Recent AI Developments**
 
 ### **Large Language Models**
-Recent advancements in large language models have shown significant improvements in reasoning capabilities. **GPT-4** and **Claude** represent major breakthroughs in AI reasoning and safety.
+Recent advancements in large language models have shown [CITE:1]significant improvements in reasoning capabilities, with GPT-4 demonstrating enhanced performance on complex mathematical and logical reasoning tasks[/CITE:1]. The model also shows [CITE:2]better alignment with human preferences and reduced harmful outputs compared to previous versions[/CITE:2].
 
-[Source: GPT-4 Technical Report | URL: https://arxiv.org/abs/2303.08774 | Date: 2023-03-15 | Confidence: High]
+[Source:1 | Title: GPT-4 Technical Report | URL: https://arxiv.org/abs/2303.08774 | Date: 2023-03-15 | Confidence: High]
+[Source:2 | Title: Constitutional AI Research | URL: https://www.anthropic.com/constitutional-ai | Date: 2023-05-10 | Confidence: High]
 
-• Key improvement: Enhanced reasoning abilities
-• Impact: Better problem-solving and code generation
-• Applications: Scientific research, education, creative writing
+### **Key Benefits of Inline Citations:**
+• **Precision**: Only the exact claims from sources are marked
+• **Transparency**: Users can see exactly what information comes from which source
+• **Accuracy**: No guessing about what text relates to what source
+• **Trust**: Clear attribution builds confidence in the information
 
-### **Computer Vision Advances**
-The field has seen remarkable progress in *multimodal understanding* and *image generation*.
+CRITICAL INSTRUCTIONS:
+1. ONLY use [CITE:X]text[/CITE:X] for information that actually comes from a specific source
+2. Use consecutive numbers (1, 2, 3...) for each source
+3. Include the [Source:X] reference immediately after using that citation
+4. Do NOT cite general knowledge - only specific claims, data, quotes, or findings
+5. Be precise - if only part of a sentence comes from a source, only mark that part
 
-[Source: DALL-E 3 Research Paper | URL: https://cdn.openai.com/papers/dall-e-3.pdf | Date: 2023-09-20 | Confidence: High]
-
-Please provide comprehensive, well-structured answers with proper source attribution for the following question:
+Please provide comprehensive, well-structured answers with precise inline source attribution for the following question:
 
 ${message}
 
 Remember to:
-- Format your response professionally with headers and sections
-- Cite specific sources with URLs and dates
-- Use bold/italic formatting appropriately
+- Mark ONLY the specific text that comes from each source with [CITE:X]text[/CITE:X]
+- Provide [Source:X] references with real URLs and dates
+- Use professional formatting with headers and sections
 - Include confidence levels for each source
 - Structure information clearly with bullet points and sections`;
     } else {

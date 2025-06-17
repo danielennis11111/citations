@@ -22,7 +22,16 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
   onCitationClick
 }) => {
   // Extract citations from content markers and combine with existing citations
-  const allCitations = extractCitationsFromContent(content, citations);
+  let allCitations = extractCitationsFromContent(content, citations);
+  
+  // Check for inline citations that were extracted during parsing
+  const inlineExtractedCitations = (globalThis as any).__extractedCitations;
+  if (inlineExtractedCitations && inlineExtractedCitations.length > 0) {
+    // Prefer inline extracted citations as they're more precise
+    allCitations = [...inlineExtractedCitations, ...allCitations];
+    // Clean up global reference
+    delete (globalThis as any).__extractedCitations;
+  }
   
   // Enhanced content formatting with markdown support
   const formattedContent = enhanceMarkdownFormatting(content);
@@ -59,6 +68,11 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
           <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
             <Bookmark size={14} />
             Sources ({allCitations.length})
+            {debugMode && (
+              <span className="text-xs text-gray-500 ml-2">
+                (Inline citation accuracy: {inlineExtractedCitations ? 'High' : 'Medium'})
+              </span>
+            )}
           </h3>
           <div className="space-y-2">
             {allCitations.map((citation) => (
@@ -82,6 +96,12 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
 function enhanceMarkdownFormatting(content: string): string {
   let formatted = content;
 
+  // Clean up inline citation markers for display (but preserve the structure for parsing)
+  // Don't remove them here - let the parser handle them
+  
+  // Clean up source reference markers for display
+  formatted = formatted.replace(/\[Source:\d+\s*\|\s*Title:[^\]]+\]/g, '');
+  
   // Replace **findings** with **discoveries** and hide the word finding
   formatted = formatted.replace(/\*\*(finding|findings)\*\*/gi, '**discovery**');
   formatted = formatted.replace(/\b(finding|findings)\b/gi, '**discovery**');
@@ -254,6 +274,11 @@ const CitationCard: React.FC<CitationCardProps> = ({ citation, debugMode, onClic
     return 'text-red-600 bg-red-50';
   };
 
+  // Determine if this is an inline citation (higher precision)
+  const isInlineCitation = citation.id.includes('inline-citation');
+  const precisionLevel = isInlineCitation ? 'High' : 'Medium';
+  const precisionColor = isInlineCitation ? 'text-green-600 bg-green-50' : 'text-yellow-600 bg-yellow-50';
+
   return (
     <div 
       className="p-3 border rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
@@ -267,12 +292,15 @@ const CitationCard: React.FC<CitationCardProps> = ({ citation, debugMode, onClic
               {citation.source}
             </h4>
             {debugMode && (
-              <div className="flex gap-1">
+              <div className="flex gap-1 flex-wrap">
                 <span className={`px-2 py-1 text-xs rounded ${getQualityColor(citation.quality || 0)}`}>
                   Q: {Math.round((citation.quality || 0) * 100)}%
                 </span>
                 <span className="px-2 py-1 text-xs rounded bg-blue-50 text-blue-600">
                   C: {Math.round((citation.confidence || 0) * 100)}%
+                </span>
+                <span className={`px-2 py-1 text-xs rounded ${precisionColor}`}>
+                  P: {precisionLevel}
                 </span>
               </div>
             )}
@@ -291,14 +319,20 @@ const CitationCard: React.FC<CitationCardProps> = ({ citation, debugMode, onClic
           )}
           
           {citation.highlightedText && (
-            <p className="text-xs text-gray-600 mt-1 line-clamp-2">
-              "{citation.highlightedText}"
-            </p>
+            <div className="mt-2">
+              <p className="text-xs text-gray-600 line-clamp-2">
+                <span className="font-medium">
+                  {isInlineCitation ? 'Exact citation:' : 'Related text:'} 
+                </span>
+                {' '}"{citation.highlightedText}"
+              </p>
+            </div>
           )}
           
           {debugMode && (
             <div className="text-xs text-gray-500 mt-1">
               Type: {citation.type} • Relevance: {Math.round(citation.relevance * 100)}%
+              {isInlineCitation && ' • Precision: AI-marked exact source'}
             </div>
           )}
         </div>

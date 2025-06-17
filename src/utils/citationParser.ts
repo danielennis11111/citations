@@ -8,7 +8,7 @@
 import { Citation, CitationReference, HighlightedText, SourceDiscovery } from '../types/index';
 
 /**
- * Parse text and highlight cited content - Enhanced for Gemini citation format
+ * Parse text and highlight cited content - Enhanced for inline citation format
  */
 export function parseTextWithHighlighting(
   text: string,
@@ -18,7 +18,141 @@ export function parseTextWithHighlighting(
   segments: HighlightedText[];
   references: CitationReference[];
 } {
-  // First, extract citation markers and replace them with placeholders
+  // First, try to parse inline citations [CITE:X]text[/CITE:X]
+  const inlineCitationResult = parseInlineCitations(text);
+  if (inlineCitationResult.segments.length > 0) {
+    return inlineCitationResult;
+  }
+
+  // Fallback to citation markers [Source: ... | URL: ... | Date: ... | Confidence: ...]
+  const citationMarkerResult = parseTextWithMarkers(text);
+  if (citationMarkerResult.segments.length > 0) {
+    return citationMarkerResult;
+  }
+  
+  // Final fallback to existing citation matching
+  return parseTextWithExistingCitations(text, citations);
+}
+
+/**
+ * Parse inline citations in the format [CITE:X]text[/CITE:X] with [Source:X | ...] references
+ */
+function parseInlineCitations(text: string): {
+  segments: HighlightedText[];
+  references: CitationReference[];
+} {
+  const segments: HighlightedText[] = [];
+  const references: CitationReference[] = [];
+  const extractedCitations: Citation[] = [];
+  
+  // First extract source references [Source:1 | Title: ... | URL: ... | Date: ... | Confidence: ...]
+  const sourcePattern = /\[Source:(\d+)\s*\|\s*Title:\s*([^|]+)\s*\|\s*URL:\s*([^|]+)\s*\|\s*Date:\s*([^|]+)\s*\|\s*Confidence:\s*([^\]]+)\]/g;
+  const sources: Map<string, Citation> = new Map();
+  
+  let sourceMatch;
+  while ((sourceMatch = sourcePattern.exec(text)) !== null) {
+    const [, sourceId, title, url, date, confidence] = sourceMatch;
+    
+    const citation: Citation = {
+      id: `inline-citation-${sourceId}`,
+      source: title.trim(),
+      type: determineSourceType(url.trim()),
+      content: `Information from ${title.trim()}`,
+      relevance: parseConfidence(confidence.trim()),
+      url: url.trim(),
+      timestamp: parseDate(date.trim()),
+      confidence: parseConfidence(confidence.trim()),
+      quality: calculateQualityFromUrl(url.trim()),
+      highlightedText: '' // Will be filled when we find the cited text
+    };
+    
+    sources.set(sourceId, citation);
+    extractedCitations.push(citation);
+  }
+  
+  // Remove source references from text for processing
+  let cleanText = text.replace(sourcePattern, '').trim();
+  
+  // Now parse inline citations [CITE:X]text[/CITE:X]
+  const inlineCitePattern = /\[CITE:(\d+)\](.*?)\[\/CITE:\d+\]/g;
+  let lastIndex = 0;
+  let match;
+  
+  while ((match = inlineCitePattern.exec(cleanText)) !== null) {
+    const [fullMatch, sourceId, citedText] = match;
+    
+    // Add non-highlighted text before this citation
+    if (match.index > lastIndex) {
+      const beforeText = cleanText.substring(lastIndex, match.index);
+      if (beforeText.trim()) {
+        segments.push({
+          text: beforeText,
+          isHighlighted: false
+        });
+      }
+    }
+    
+    // Add the highlighted cited text
+    const citation = sources.get(sourceId);
+    if (citation) {
+      // Update the citation with the actual highlighted text
+      citation.highlightedText = citedText.trim();
+      
+      segments.push({
+        text: citedText,
+        isHighlighted: true,
+        citationId: citation.id
+      });
+      
+      references.push({
+        citationId: citation.id,
+        inlineText: citedText,
+        position: match.index,
+        highlightStart: match.index,
+        highlightEnd: match.index + citedText.length
+      });
+    } else {
+      // If no source found, treat as regular text
+      segments.push({
+        text: citedText,
+        isHighlighted: false
+      });
+    }
+    
+    lastIndex = match.index + fullMatch.length;
+  }
+  
+  // Add remaining text
+  if (lastIndex < cleanText.length) {
+    const remainingText = cleanText.substring(lastIndex);
+    if (remainingText.trim()) {
+      segments.push({
+        text: remainingText,
+        isHighlighted: false
+      });
+    }
+  }
+  
+  // If we found inline citations, also store the extracted citations globally
+  if (segments.some(s => s.isHighlighted)) {
+    // Store extracted citations for use by CitationRenderer
+    (globalThis as any).__extractedCitations = extractedCitations;
+  }
+  
+  return { segments, references };
+}
+
+/**
+ * Parse text that contains citation markers (legacy format)
+ */
+function parseTextWithMarkers(text: string): {
+  segments: HighlightedText[];
+  references: CitationReference[];
+} {
+  const segments: HighlightedText[] = [];
+  const references: CitationReference[] = [];
+  
+  // Extract citation markers and replace them with placeholders
   const citationMarkerPattern = /\[Source:\s*([^|]+)\s*\|\s*URL:\s*([^|]+)\s*\|\s*Date:\s*([^|]+)\s*\|\s*Confidence:\s*([^\]]+)\]/g;
   const citationMarkers: Array<{
     match: string;
@@ -53,78 +187,54 @@ export function parseTextWithHighlighting(
     });
   }
   
-  // If we found citation markers, process them
+  // Process citation markers if found
   if (citationMarkers.length > 0) {
-    return parseTextWithMarkers(text, citationMarkers);
-  }
-  
-  // Fallback to original citation matching for pre-existing citations
-  return parseTextWithExistingCitations(text, citations);
-}
-
-/**
- * Parse text that contains citation markers
- */
-function parseTextWithMarkers(
-  text: string,
-  citationMarkers: Array<{
-    match: string;
-    start: number;
-    end: number;
-    citation: Citation;
-  }>
-): {
-  segments: HighlightedText[];
-  references: CitationReference[];
-} {
-  const segments: HighlightedText[] = [];
-  const references: CitationReference[] = [];
-  
-  let currentIndex = 0;
-  
-  for (const marker of citationMarkers) {
-    // Find the sentence that precedes this citation
-    const sentenceStart = findSentenceStart(text, marker.start);
+    let currentIndex = 0;
     
-    // Add non-highlighted text before the sentence
-    if (sentenceStart > currentIndex) {
+    for (const marker of citationMarkers) {
+      // Find the sentence that precedes this citation
+      const sentenceStart = findSentenceStart(text, marker.start);
+      
+      // Add non-highlighted text before the sentence
+      if (sentenceStart > currentIndex) {
+        segments.push({
+          text: text.substring(currentIndex, sentenceStart),
+          isHighlighted: false
+        });
+      }
+      
+      // Add the highlighted sentence (without the citation marker)
+      const sentenceEnd = marker.start;
+      if (sentenceEnd > sentenceStart) {
+        const sentenceText = text.substring(sentenceStart, sentenceEnd).trim();
+        if (sentenceText) {
+          segments.push({
+            text: sentenceText,
+            isHighlighted: true,
+            citationId: marker.citation.id
+          });
+          
+          references.push({
+            citationId: marker.citation.id,
+            inlineText: sentenceText,
+            position: sentenceStart,
+            highlightStart: sentenceStart,
+            highlightEnd: sentenceEnd
+          });
+        }
+      }
+      
+      // Skip the citation marker itself
+      currentIndex = marker.end;
+    }
+    
+    // Add remaining text
+    if (currentIndex < text.length) {
       segments.push({
-        text: text.substring(currentIndex, sentenceStart),
+        text: text.substring(currentIndex),
         isHighlighted: false
       });
     }
-    
-    // Add the highlighted sentence (without the citation marker)
-    const sentenceEnd = marker.start;
-    if (sentenceEnd > sentenceStart) {
-      const sentenceText = text.substring(sentenceStart, sentenceEnd).trim();
-      if (sentenceText) {
-        segments.push({
-          text: sentenceText,
-          isHighlighted: true,
-          citationId: marker.citation.id
-        });
-        
-        references.push({
-          citationId: marker.citation.id,
-          inlineText: sentenceText,
-          position: sentenceStart,
-          highlightStart: sentenceStart,
-          highlightEnd: sentenceEnd
-        });
-      }
-    }
-    
-    // Skip the citation marker itself
-    currentIndex = marker.end;
-  }
-  
-  // Add remaining text
-  if (currentIndex < text.length) {
-    segments.push({
-      text: text.substring(currentIndex),
-      isHighlighted: false
-    });
   }
   
   return { segments, references };
