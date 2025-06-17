@@ -216,11 +216,14 @@ const CitationDemo: React.FC = () => {
             {message.role === 'assistant' ? (
               <CitationRenderer
                 content={message.content}
-                citations={allCitations}
+                citations={message.citations || []}
                 debugMode={isDebugMode}
                 onCitationClick={(citation) => {
                   // Handle citation click - could open in sidebar or show more details
                   console.log('Citation clicked:', citation);
+                  if (citation.url) {
+                    window.open(citation.url, '_blank');
+                  }
                 }}
               />
             ) : (

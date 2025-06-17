@@ -27,9 +27,26 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
   const [hoveredCitation, setHoveredCitation] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
 
+  // Debug logging in development
+  React.useEffect(() => {
+    if (process.env.NODE_ENV === 'development') {
+      console.log('HighlightedText Debug:', {
+        segments: segments.length,
+        highlightedSegments: segments.filter(s => s.isHighlighted).length,
+        citations: citations.length,
+        citationIds: segments.filter(s => s.isHighlighted).map(s => s.citationId)
+      });
+    }
+  }, [segments, citations]);
+
   const handleCitationHover = (citationId: string, event: React.MouseEvent) => {
     setHoveredCitation(citationId);
     setTooltipPosition({ x: event.clientX, y: event.clientY });
+    
+    // Debug logging
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Citation hover:', citationId, getCitationById(citationId));
+    }
   };
 
   const handleCitationClick = (citationId: string) => {
@@ -83,10 +100,22 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
           )}
         </div>
         
-        <p className="text-xs text-gray-700 leading-relaxed mb-3">
-          {citation.content.substring(0, 120)}
-          {citation.content.length > 120 ? '...' : ''}
-        </p>
+        {/* Enhanced snippet display */}
+        {citation.highlightedText && citation.highlightedText.trim() ? (
+          <div className="bg-yellow-50 border-l-4 border-yellow-400 p-2 mb-3">
+            <p className="text-xs font-medium text-yellow-800 mb-1">Highlighted text:</p>
+            <p className="text-xs text-yellow-700 leading-relaxed">
+              "{citation.highlightedText}"
+            </p>
+          </div>
+        ) : (
+          <p className="text-xs text-gray-700 leading-relaxed mb-3">
+            {citation.content && citation.content.length > 10 
+              ? citation.content.substring(0, 120) + (citation.content.length > 120 ? '...' : '')
+              : 'Source information available'
+            }
+          </p>
+        )}
 
         <div className="mt-2 text-xs text-blue-600 font-medium flex items-center">
           <Info className="w-3 h-3 inline mr-1" />
@@ -111,11 +140,24 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
           return (
             <span
               key={index}
-              className="bg-blue-100 text-blue-900 px-1 py-0.5 rounded cursor-pointer hover:bg-blue-200 transition-colors border-b-2 border-blue-300"
-              onMouseEnter={(e) => handleCitationHover(segment.citationId!, e)}
-              onMouseLeave={() => setHoveredCitation(null)}
-              onClick={() => handleCitationClick(segment.citationId!)}
-              title="Click to view source details"
+              className="bg-blue-100 hover:bg-blue-200 text-blue-900 px-1.5 py-1 rounded-md cursor-pointer transition-all duration-200 border-b-2 border-blue-400 hover:border-blue-500 shadow-sm hover:shadow-md"
+              onMouseEnter={(e) => {
+                e.stopPropagation();
+                handleCitationHover(segment.citationId!, e);
+              }}
+              onMouseLeave={(e) => {
+                e.stopPropagation();
+                setHoveredCitation(null);
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleCitationClick(segment.citationId!);
+              }}
+              title={`Citation: ${citation.source} - Hover for details, click for more`}
+              style={{ 
+                position: 'relative',
+                zIndex: hoveredCitation === segment.citationId ? 10 : 1
+              }}
             >
               {renderFormattedText(segment.text)}
             </span>
