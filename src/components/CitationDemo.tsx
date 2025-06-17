@@ -126,12 +126,17 @@ const CitationDemo: React.FC = () => {
     setIsLoading(true);
     setError(null);
 
+    console.log('🚀 Starting message send...');
+
     try {
+      console.log('📡 Calling Gemini service...');
       const response = await geminiService.sendMessage(
         userMessage.content,
         messages.slice(-5), // Include last 5 messages for context
         true
       );
+
+      console.log('✅ Got response:', response);
 
       const assistantMessage: ChatMessage = {
         id: `msg-${Date.now()}-assistant`,
@@ -142,6 +147,7 @@ const CitationDemo: React.FC = () => {
         model: response.model
       };
 
+      console.log('💬 Adding assistant message to state...');
       setMessages(prev => [...prev, assistantMessage]);
 
       // Auto-switch to sources tab if citations are found
@@ -149,11 +155,15 @@ const CitationDemo: React.FC = () => {
         setActiveTab('sources');
       }
 
+      console.log('✅ Message processing complete');
+
     } catch (err) {
+      console.error('❌ Chat error:', err);
       setError(`Failed to get AI response: ${err}`);
-      console.error('Chat error:', err);
     } finally {
+      console.log('🏁 Setting loading to false...');
       setIsLoading(false);
+      console.log('🏁 Loading state cleared');
     }
   };
 
@@ -343,43 +353,45 @@ const CitationDemo: React.FC = () => {
         </header>
 
         {/* Messages Area */}
-        <main className="flex-1 overflow-auto p-6">
-          <div className="max-w-4xl mx-auto">
-            {messages.length === 0 ? (
-              <div className="text-center py-12">
-                <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Start a conversation</h3>
-                <p className="text-gray-600 mb-6">Ask any question and get AI responses with verified source citations</p>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-md mx-auto text-sm">
-                  {[
-                    "What are the latest developments in AI?",
-                    "Explain quantum computing basics",
-                    "Recent climate change research findings",
-                    "How does machine learning work?"
-                  ].map((suggestion, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setCurrentMessage(suggestion)}
-                      className="p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      {suggestion}
-                    </button>
-                  ))}
+        <main className="flex-1 overflow-auto p-6 min-h-0">
+          <div className="max-w-4xl mx-auto h-full flex flex-col">
+            <div className="flex-1 min-h-0 overflow-auto pb-4">
+              {messages.length === 0 ? (
+                <div className="text-center py-12">
+                  <MessageSquare className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">Start a conversation</h3>
+                  <p className="text-gray-600 mb-6">Ask any question and get AI responses with verified source citations</p>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-w-md mx-auto text-sm">
+                    {[
+                      "What are the latest developments in AI?",
+                      "Explain quantum computing basics",
+                      "Recent climate change research findings",
+                      "How does machine learning work?"
+                    ].map((suggestion, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentMessage(suggestion)}
+                        className="p-3 text-left border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            ) : (
-              <div>
-                {renderMessages()}
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-            
-            {isLoading && (
-              <div className="flex items-center justify-center py-4">
-                <Loader className="w-5 h-5 animate-spin text-blue-600 mr-2" />
-                <span className="text-gray-600">AI is thinking...</span>
-              </div>
-            )}
+              ) : (
+                <div>
+                  {renderMessages()}
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+              
+              {isLoading && (
+                <div className="flex items-center justify-center py-4">
+                  <Loader className="w-5 h-5 animate-spin text-blue-600 mr-2" />
+                  <span className="text-gray-600">AI is thinking...</span>
+                </div>
+              )}
+            </div>
           </div>
         </main>
 
@@ -398,7 +410,7 @@ const CitationDemo: React.FC = () => {
         )}
 
         {/* Input Area */}
-        <div className="border-t border-gray-200 p-6 bg-white">
+        <div className="border-t border-gray-200 p-6 bg-white sticky bottom-0 z-10">
           <div className="max-w-4xl mx-auto flex space-x-3">
             <textarea
               ref={chatInputRef}
