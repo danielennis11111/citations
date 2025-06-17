@@ -189,25 +189,26 @@ Remember:
    */
   private extractCitationsFromResponse(content: string, query: string): Citation[] {
     const citations: Citation[] = [];
-    const sourcePattern = /\[Source:\s*([^|]+)\s*\|\s*URL:\s*([^|]+)\s*\|\s*Date:\s*([^|]+)\s*\|\s*Confidence:\s*([^\]]+)\]/g;
+    
+    // Look for the format specified in our prompt: [Source:1] Title - URL (Date)
+    const sourcePattern = /\[Source:(\d+)\]\s*([^-]+?)\s*-\s*(https?:\/\/[^\s)]+)\s*\(([^)]+)\)/g;
     
     let match;
-    let citationId = 1;
 
     while ((match = sourcePattern.exec(content)) !== null) {
-      const [fullMatch, title, url, date, confidence] = match;
+      const [, sourceNum, title, url, date] = match;
       
       citations.push({
-        id: `citation-${citationId++}`,
+        id: `citation-${sourceNum}`,
         source: title.trim(),
         type: this.determineSourceType(url.trim()),
         content: `Information from ${title.trim()}`,
-        relevance: this.calculateRelevance(confidence.trim()),
+        relevance: 0.8,
         url: url.trim(),
         timestamp: this.parseDate(date.trim()),
-        confidence: this.parseConfidence(confidence.trim()),
+        confidence: 0.8,
         quality: this.calculateQuality(title.trim(), url.trim()),
-        highlightedText: this.extractRelevantText(content, fullMatch)
+        highlightedText: this.extractRelevantText(content, `[CITE:${sourceNum}]`)
       });
     }
 
