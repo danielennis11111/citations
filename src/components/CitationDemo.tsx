@@ -10,9 +10,9 @@ import CitationRenderer from './CitationRenderer';
 import HighlightedText from './HighlightedText';
 import RAGDiscoveryPanel from './RAGDiscoveryPanel';
 import { parseTextWithHighlighting } from '../utils/citationParser';
-import { FileText, Zap, Search, BookOpen } from 'lucide-react';
+import { FileText, Zap, Search, BookOpen, Settings, Eye, EyeOff } from 'lucide-react';
 
-// Mock data for demonstration
+// Mock data for demonstration with actual source URLs
 const mockCitations: Citation[] = [
   {
     id: 'citation-1',
@@ -26,7 +26,8 @@ const mockCitations: Citation[] = [
     highlightedText: 'Retrieval-Augmented Generation (RAG) combines the strengths of retrieval-based and generation-based approaches.',
     confidence: 0.88,
     quality: 0.9,
-    page: 12
+    page: 12,
+    url: 'https://arxiv.org/abs/2005.11401'
   },
   {
     id: 'citation-2',
@@ -40,7 +41,8 @@ const mockCitations: Citation[] = [
     highlightedText: 'Incantation patterns represent structured prompt techniques that consistently produce better AI outputs.',
     confidence: 0.85,
     quality: 0.86,
-    page: 45
+    page: 45,
+    url: 'https://www.promptingguide.ai/techniques/cot'
   },
   {
     id: 'citation-3',
@@ -54,7 +56,8 @@ const mockCitations: Citation[] = [
     highlightedText: 'Citation quality can be evaluated along multiple dimensions: relevance to the query, confidence score based on semantic similarity, and content quality metrics.',
     confidence: 0.76,
     quality: 0.78,
-    page: 8
+    page: 8,
+    url: 'https://aclanthology.org/2022.acl-long.83.pdf'
   },
   {
     id: 'citation-4',
@@ -68,7 +71,7 @@ const mockCitations: Citation[] = [
     highlightedText: 'Interactive highlighting of source text provides users with immediate visual feedback on which parts of an AI response are grounded in retrieved documents.',
     confidence: 0.82,
     quality: 0.84,
-    url: 'https://example.com/interactive-ai'
+    url: 'https://github.com/microsoft/guidance'
   },
   {
     id: 'citation-5',
@@ -82,7 +85,8 @@ const mockCitations: Citation[] = [
     highlightedText: 'Tracking the reasoning methods used to discover information is essential for AI transparency.',
     confidence: 0.84,
     quality: 0.87,
-    page: 23
+    page: 23,
+    url: 'https://www.anthropic.com/research/constitutional-ai-harmlessness-from-ai-feedback'
   }
 ];
 
@@ -137,7 +141,8 @@ const mockDiscoveries: RAGDiscovery[] = [
         highlightedText: 'By reversing common assumptions about AI interfaces, we can discover innovative approaches.',
         confidence: 0.72,
         quality: 0.75,
-        page: 67
+        page: 67,
+        url: 'https://designguidelines.withgoogle.com/conversation/'
       }
     ],
     confidence: 0.75,
@@ -159,8 +164,10 @@ Tracking the reasoning methods used to discover information is essential for AI 
 `;
 
 const CitationDemo: React.FC = () => {
-  const [activeTab, setActiveTab] = useState('highlighted');
+  const [activeTab, setActiveTab] = useState('citations');
   const [selectedDiscovery, setSelectedDiscovery] = useState<RAGDiscovery | null>(null);
+  const [isDebugMode, setIsDebugMode] = useState(false);
+  const [sidebarVisible, setSidebarVisible] = useState(true);
   
   // Parse the example response to highlight citations
   const { segments } = parseTextWithHighlighting(exampleResponse, mockCitations, mockDiscoveries);
@@ -169,123 +176,211 @@ const CitationDemo: React.FC = () => {
     setSelectedDiscovery(discovery);
     setActiveTab('discovery-detail');
   };
+
+  const handleCitationClick = (citationId: string) => {
+    setActiveTab('citations');
+    // Scroll to citation in sidebar if needed
+  };
   
   return (
-    <div className="max-w-4xl mx-auto p-4">
-      <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2 flex items-center">
-          <BookOpen className="w-6 h-6 mr-2 text-blue-600" />
-          Enhanced RAG Citation System
-        </h1>
-        <p className="text-gray-600 mb-6">
-          Interactive demonstration of the citation system with highlighting, tooltips, and discovery tracking.
-        </p>
-        
-        <SimpleTabs value={activeTab} onValueChange={setActiveTab} className="mb-6">
-          <SimpleTabsList>
-            <SimpleTabsTrigger value="highlighted">
-              <FileText className="w-4 h-4 mr-2" />
-              Highlighted Text
-            </SimpleTabsTrigger>
-            <SimpleTabsTrigger value="citations">
-              <BookOpen className="w-4 h-4 mr-2" />
-              Citations
-            </SimpleTabsTrigger>
-            <SimpleTabsTrigger value="discoveries">
-              <Zap className="w-4 h-4 mr-2" />
-              Discoveries
-            </SimpleTabsTrigger>
-            {selectedDiscovery && (
-              <SimpleTabsTrigger value="discovery-detail">
-                <Search className="w-4 h-4 mr-2" />
-                Discovery Detail
-              </SimpleTabsTrigger>
-            )}
-          </SimpleTabsList>
-          
-          <SimpleTabsContent value="highlighted" className="mt-4">
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <h2 className="text-lg font-medium text-gray-900 mb-3">AI Response with Citation Highlighting</h2>
+    <div className="flex h-screen bg-gray-50">
+      {/* Main Content */}
+      <div className={`flex-1 flex flex-col transition-all duration-300 ${sidebarVisible ? 'mr-96' : 'mr-0'}`}>
+        {/* Header */}
+        <header className="bg-white border-b border-gray-200 px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <BookOpen className="w-7 h-7 text-blue-600" />
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Enhanced RAG Citation System</h1>
+                <p className="text-sm text-gray-600">Interactive demonstration with source verification</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center space-x-3">
+              {/* Debug Mode Toggle */}
+              <button
+                onClick={() => setIsDebugMode(!isDebugMode)}
+                className={`flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                  isDebugMode 
+                    ? 'bg-orange-100 text-orange-800 border border-orange-200' 
+                    : 'bg-gray-100 text-gray-600 border border-gray-200 hover:bg-gray-200'
+                }`}
+              >
+                <Settings className="w-4 h-4" />
+                <span>{isDebugMode ? 'Debug Mode' : 'Simple Mode'}</span>
+              </button>
+              
+              {/* Sidebar Toggle */}
+              <button
+                onClick={() => setSidebarVisible(!sidebarVisible)}
+                className="flex items-center space-x-2 px-3 py-1.5 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 border border-blue-200 hover:bg-blue-200 transition-colors"
+              >
+                {sidebarVisible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <span>{sidebarVisible ? 'Hide' : 'Show'} Sources</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        {/* Main Content Area */}
+        <main className="flex-1 overflow-auto p-6">
+          <div className="max-w-4xl mx-auto">
+            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">AI Response with Source Attribution</h2>
+                <div className="text-xs text-gray-500">
+                  {mockCitations.length} sources • {mockDiscoveries.length} discoveries
+                </div>
+              </div>
+              
               <div className="prose prose-blue max-w-none">
                 <HighlightedText
                   segments={segments}
                   citations={mockCitations}
                   discoveries={mockDiscoveries}
-                  className="text-gray-800 leading-relaxed"
+                  onCitationClick={handleCitationClick}
+                  className="text-gray-800 leading-relaxed text-base"
                 />
               </div>
-              <div className="mt-4 text-xs text-gray-500">
-                <p>👆 Try clicking on the highlighted text to see citation details</p>
-              </div>
-            </div>
-          </SimpleTabsContent>
-          
-          <SimpleTabsContent value="citations" className="mt-4">
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <h2 className="text-lg font-medium text-gray-900 mb-3">Citations</h2>
-              <CitationRenderer
-                citations={mockCitations}
-                showRelevanceScores={true}
-                showIncantations={true}
-              />
-            </div>
-          </SimpleTabsContent>
-          
-          <SimpleTabsContent value="discoveries" className="mt-4">
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-              <h2 className="text-lg font-medium text-gray-900 mb-3">RAG Discoveries</h2>
-              <RAGDiscoveryPanel
-                discoveries={mockDiscoveries}
-                onDiscoveryClick={handleDiscoveryClick}
-              />
-            </div>
-          </SimpleTabsContent>
-          
-          {selectedDiscovery && (
-            <SimpleTabsContent value="discovery-detail" className="mt-4">
-              <div className="bg-gray-50 border border-gray-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-medium text-gray-900">Discovery Detail</h2>
-                  <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
-                    {selectedDiscovery.incantationUsed.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                  </span>
-                </div>
-                
-                <div className="mb-4">
-                  <h3 className="text-sm font-medium text-gray-700">Query</h3>
-                  <p className="text-gray-800 bg-white border border-gray-200 rounded p-2 mt-1">
-                    "{selectedDiscovery.query}"
+              
+              <div className="mt-6 pt-4 border-t border-gray-200">
+                <div className="flex items-start space-x-2 text-sm text-gray-600">
+                  <FileText className="w-4 h-4 mt-0.5 text-blue-500" />
+                  <p>
+                    <strong>How it works:</strong> Click on any highlighted text to see source details in the sidebar. 
+                    All information is grounded in verifiable sources with direct links to original materials.
                   </p>
                 </div>
-                
-                <div className="mb-4">
-                  <h3 className="text-sm font-medium text-gray-700">Found Sources</h3>
-                  <div className="mt-2">
-                    <CitationRenderer
-                      citations={selectedDiscovery.results}
-                      showRelevanceScores={true}
-                      showIncantations={false}
-                    />
+              </div>
+            </div>
+
+            {!isDebugMode && (
+              <div className="mt-6 bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start space-x-2">
+                  <Settings className="w-5 h-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h3 className="text-sm font-medium text-blue-900">Want more details?</h3>
+                    <p className="text-sm text-blue-800 mt-1">
+                      Switch to Debug Mode to see confidence scores, discovery methods, and technical metadata.
+                    </p>
                   </div>
                 </div>
-                
-                <div className="text-xs text-gray-500 mt-4">
-                  <p>Discovery made on {selectedDiscovery.timestamp.toLocaleString()}</p>
-                </div>
               </div>
-            </SimpleTabsContent>
-          )}
-        </SimpleTabs>
-        
-        <div className="border-t border-gray-200 pt-4 mt-6">
-          <h3 className="text-sm font-medium text-gray-900 mb-2">About This Demo</h3>
-          <p className="text-sm text-gray-600">
-            This demonstration showcases the enhanced RAG citation system with interactive highlighting, 
-            source attribution, and incantation tracking. The system provides transparency into how AI 
-            discoveries are made and where information comes from.
-          </p>
-        </div>
+            )}
+          </div>
+        </main>
       </div>
+
+      {/* Right Sidebar */}
+      {sidebarVisible && (
+        <div className="fixed right-0 top-0 w-96 h-screen bg-white border-l border-gray-200 shadow-lg">
+          <div className="flex flex-col h-full">
+            {/* Sidebar Header */}
+            <div className="border-b border-gray-200 p-4">
+              <SimpleTabs value={activeTab} onValueChange={setActiveTab}>
+                <SimpleTabsList>
+                  <SimpleTabsTrigger value="citations">
+                    <BookOpen className="w-4 h-4 mr-1.5" />
+                    Sources
+                  </SimpleTabsTrigger>
+                  <SimpleTabsTrigger value="discoveries">
+                    <Zap className="w-4 h-4 mr-1.5" />
+                    Research
+                  </SimpleTabsTrigger>
+                  {selectedDiscovery && (
+                    <SimpleTabsTrigger value="discovery-detail">
+                      <Search className="w-4 h-4 mr-1.5" />
+                      Detail
+                    </SimpleTabsTrigger>
+                  )}
+                </SimpleTabsList>
+              </SimpleTabs>
+            </div>
+
+            {/* Sidebar Content */}
+            <div className="flex-1 overflow-auto p-4">
+              <SimpleTabsContent value="citations">
+                <div className="space-y-4">
+                  <div className="text-xs text-gray-500 mb-3">
+                    {mockCitations.length} sources found • Click to view original
+                  </div>
+                  <CitationRenderer
+                    citations={mockCitations}
+                    showRelevanceScores={isDebugMode}
+                    showIncantations={isDebugMode}
+                    maxPreviewLength={isDebugMode ? 200 : 120}
+                    className="space-y-3"
+                  />
+                </div>
+              </SimpleTabsContent>
+              
+              <SimpleTabsContent value="discoveries">
+                <div className="space-y-4">
+                  <div className="text-xs text-gray-500 mb-3">
+                    Research discoveries • {isDebugMode ? 'Debug view' : 'Simplified view'}
+                  </div>
+                  <RAGDiscoveryPanel
+                    discoveries={mockDiscoveries}
+                    onDiscoveryClick={handleDiscoveryClick}
+                    className="space-y-3"
+                  />
+                </div>
+              </SimpleTabsContent>
+              
+              {selectedDiscovery && (
+                <SimpleTabsContent value="discovery-detail">
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-gray-900">Discovery Analysis</h3>
+                      <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded text-xs font-medium">
+                        {selectedDiscovery.incantationUsed.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                      </span>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-700 mb-2">Research Query</h4>
+                      <p className="text-sm text-gray-800 bg-gray-50 border border-gray-200 rounded p-3">
+                        "{selectedDiscovery.query}"
+                      </p>
+                    </div>
+                    
+                    <div>
+                      <h4 className="text-xs font-medium text-gray-700 mb-2">Sources Found</h4>
+                      <CitationRenderer
+                        citations={selectedDiscovery.results}
+                        showRelevanceScores={isDebugMode}
+                        showIncantations={false}
+                        maxPreviewLength={100}
+                      />
+                    </div>
+                    
+                    {isDebugMode && (
+                      <div className="border-t border-gray-200 pt-3">
+                        <h4 className="text-xs font-medium text-gray-700 mb-2">Debug Information</h4>
+                        <div className="space-y-2 text-xs text-gray-600">
+                          <div className="flex justify-between">
+                            <span>Confidence:</span>
+                            <span className="font-medium">{Math.round(selectedDiscovery.confidence * 100)}%</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Sources:</span>
+                            <span className="font-medium">{selectedDiscovery.results.length}</span>
+                          </div>
+                          <div className="flex justify-between">
+                            <span>Timestamp:</span>
+                            <span className="font-medium">{selectedDiscovery.timestamp.toLocaleString()}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </SimpleTabsContent>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -295,7 +390,6 @@ const SimpleTabs = ({ value, onValueChange, children, className = '' }: any) => 
   return (
     <div className={className}>
       {React.Children.map(children, (child) => {
-        // Skip null or undefined children
         if (!child) return null;
         
         if (child.type === SimpleTabsList || (child.type === SimpleTabsContent && child.props.value === value)) {
@@ -309,9 +403,8 @@ const SimpleTabs = ({ value, onValueChange, children, className = '' }: any) => 
 
 const SimpleTabsList = ({ children, activeTab, onTabChange }: any) => {
   return (
-    <div className="flex space-x-1 border-b border-gray-200">
+    <div className="flex space-x-1">
       {React.Children.map(children, (child) => {
-        // Skip null or undefined children
         if (!child) return null;
         
         return React.cloneElement(child, { 
@@ -326,10 +419,10 @@ const SimpleTabsList = ({ children, activeTab, onTabChange }: any) => {
 const SimpleTabsTrigger = ({ value, active, onClick, children }: any) => {
   return (
     <button
-      className={`flex items-center px-4 py-2 text-sm font-medium ${
+      className={`flex items-center px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
         active 
-          ? 'text-blue-600 border-b-2 border-blue-600' 
-          : 'text-gray-500 hover:text-gray-700'
+          ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+          : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
       }`}
       onClick={onClick}
     >
