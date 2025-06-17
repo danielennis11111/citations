@@ -239,14 +239,14 @@ function parseEndOfSentenceCitations(
   
   // Find all citation markers [CITE:X]
   const citationPattern = /\[CITE:(\d+)\]/g;
-  const citationMatches: Array<{match: RegExpExecArray, sourceId: string, index: number}> = [];
+  const citationMatches: Array<{sourceId: string, index: number, length: number}> = [];
   let match;
   
   while ((match = citationPattern.exec(cleanText)) !== null) {
     citationMatches.push({
-      match,
       sourceId: match[1],
-      index: match.index!
+      index: match.index!,
+      length: match[0].length
     });
   }
   
@@ -280,49 +280,49 @@ function parseEndOfSentenceCitations(
     return { segments, references };
   }
   
-  // Remove citation markers to get clean text for processing
-  const textWithoutCitations = cleanText.replace(citationPattern, '');
-  
   // Sort citations by position
   citationMatches.sort((a, b) => a.index - b.index);
+  
+  // Remove citation markers to get clean text for processing
+  const textWithoutCitations = cleanText.replace(citationPattern, '');
   
   let processedIndex = 0;
   
   citationMatches.forEach((citationMatch, citationIndex) => {
-    const { sourceId, index: citationStart } = citationMatch;
+    const { sourceId, index: originalCitationStart } = citationMatch;
     
-    // Calculate where this citation's text should start
-    // Find sentence boundaries - look for the start of the sentence this citation belongs to
-    const textBeforeCitation = cleanText.substring(0, citationStart);
+    // Calculate adjusted positions after removing previous citations
+    let adjustedCitationStart = originalCitationStart;
+    citationMatches.slice(0, citationIndex).forEach(prevCitation => {
+      if (prevCitation.index < originalCitationStart) {
+        adjustedCitationStart -= prevCitation.length;
+      }
+    });
     
-    // Find the start of the current sentence
-    const sentenceBreaks = /[.!?]\s+|^|\n\s*•\s*/g;
+    // Find the sentence boundary before this citation
+    const textBeforeThisCitation = cleanText.substring(0, originalCitationStart);
+    
+    // Look for sentence start markers: period + space, start of text, or bullet point
+    const sentenceMarkers = /[.!?]\s+|^|\n\s*[•\-\*]\s*/g;
     let sentenceStart = 0;
     let sentenceMatch;
     
-    while ((sentenceMatch = sentenceBreaks.exec(textBeforeCitation)) !== null) {
+    while ((sentenceMatch = sentenceMarkers.exec(textBeforeThisCitation)) !== null) {
       sentenceStart = sentenceMatch.index + sentenceMatch[0].length;
     }
     
-    // Adjust for processed text (account for removed citations)
+    // Adjust sentence start for removed citations
     let adjustedSentenceStart = sentenceStart;
-    let adjustedCitationStart = citationStart;
-    
-    // Count citations before this one to adjust positions
-    const citationsBefore = citationMatches.slice(0, citationIndex);
-    citationsBefore.forEach(prevCitation => {
+    citationMatches.slice(0, citationIndex).forEach(prevCitation => {
       if (prevCitation.index < sentenceStart) {
-        adjustedSentenceStart -= prevCitation.match[0].length;
-      }
-      if (prevCitation.index < citationStart) {
-        adjustedCitationStart -= prevCitation.match[0].length;
+        adjustedSentenceStart -= prevCitation.length;
       }
     });
     
     // Add any non-highlighted text before this sentence
     if (adjustedSentenceStart > processedIndex) {
-      const beforeText = textWithoutCitations.substring(processedIndex, adjustedSentenceStart).trim();
-      if (beforeText) {
+      const beforeText = textWithoutCitations.substring(processedIndex, adjustedSentenceStart);
+      if (beforeText.trim()) {
         segments.push({
           text: beforeText,
           isHighlighted: false
@@ -330,13 +330,13 @@ function parseEndOfSentenceCitations(
       }
     }
     
-    // Extract the sentence/phrase to highlight
-    const textToHighlight = textWithoutCitations.substring(adjustedSentenceStart, adjustedCitationStart).trim();
+    // Extract the text to highlight (from sentence start to citation)
+    const textToHighlight = textWithoutCitations.substring(adjustedSentenceStart, adjustedCitationStart);
     
-    // Add the highlighted text if we have a valid citation
+    // Add the highlighted text
     const citation = sources.get(sourceId);
-    if (citation && textToHighlight) {
-      citation.highlightedText = textToHighlight;
+    if (citation && textToHighlight.trim()) {
+      citation.highlightedText = textToHighlight.trim();
       
       segments.push({
         text: textToHighlight,
@@ -346,7 +346,7 @@ function parseEndOfSentenceCitations(
       
       references.push({
         citationId: citation.id,
-        inlineText: textToHighlight,
+        inlineText: textToHighlight.trim(),
         position: adjustedSentenceStart,
         highlightStart: adjustedSentenceStart,
         highlightEnd: adjustedCitationStart
@@ -358,8 +358,8 @@ function parseEndOfSentenceCitations(
   
   // Add any remaining text after the last citation
   if (processedIndex < textWithoutCitations.length) {
-    const remainingText = textWithoutCitations.substring(processedIndex).trim();
-    if (remainingText) {
+    const remainingText = textWithoutCitations.substring(processedIndex);
+    if (remainingText.trim()) {
       segments.push({
         text: remainingText,
         isHighlighted: false
@@ -712,25 +712,23 @@ export function createSourceDiscovery(
 
 // Debug function to test citation parsing
 export function testCitationParsing() {
-  const testText = `• *The Legend of Zelda: Breath of the Wild*: Rated E10+ for Everyone 10 and older [CITE:1]. The content descriptors include Fantasy Violence and Mild Suggestive Themes [CITE:1].
+  const testText = `Superposition: Qubits can exist in a state of superposition, meaning they can represent 0, 1, or both simultaneously . [CITE:3]Formally, a qubit is a unit vector in a two-dimensional complex vector space. This allows quantum computers to explore many possibilities concurrently.`;
 
-• *The Legend of Zelda: Tears of the Kingdom*: Rated E10+ for Everyone 10 and older [CITE:2]. The content descriptors include Fantasy Violence and Mild Suggestive Themes [CITE:2].
-
-• *The Legend of Zelda: Ocarina of Time*: Rated E for Everyone [CITE:3]. The content descriptors include Animated Violence and Animated Blood [CITE:3].`;
-
-  console.log('Testing citation parsing...');
+  console.log('Testing end-of-sentence citation parsing...');
   console.log('Input text:', testText);
   
   const result = parseTextWithHighlighting(testText, []);
   console.log('Parsed result:', result);
+  console.log('Number of segments:', result.segments.length);
   console.log('Number of highlighted segments:', result.segments.filter((s: HighlightedText) => s.isHighlighted).length);
   
-  // Log each segment
+  // Log each segment with more detail
   result.segments.forEach((segment: HighlightedText, index: number) => {
     console.log(`Segment ${index + 1}:`, {
-      text: segment.text.substring(0, 50) + (segment.text.length > 50 ? '...' : ''),
+      text: segment.text,
       isHighlighted: segment.isHighlighted,
-      citationId: segment.citationId || 'none'
+      citationId: segment.citationId || 'none',
+      length: segment.text.length
     });
   });
   
@@ -740,6 +738,7 @@ export function testCitationParsing() {
   
   extractedCitations.forEach((citation: Citation, index: number) => {
     console.log(`Citation ${index + 1}:`, {
+      id: citation.id,
       source: citation.source,
       url: citation.url,
       highlightedText: citation.highlightedText

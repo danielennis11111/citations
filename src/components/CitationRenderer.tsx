@@ -63,6 +63,16 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
   // Enhanced content formatting with markdown support
   const formattedContent = enhanceMarkdownFormatting(content);
   
+  // Debug the content before parsing
+  if (debugMode && process.env.NODE_ENV === 'development') {
+    console.log('CitationRenderer - Before parsing:', {
+      originalContent: content.substring(0, 200) + '...',
+      formattedContent: formattedContent.substring(0, 200) + '...',
+      hasCiteMarkers: /\[CITE:\d+\]/.test(content),
+      hasCiteMarkersInFormatted: /\[CITE:\d+\]/.test(formattedContent)
+    });
+  }
+  
   // Parse the text to get segments for highlighting
   const { segments } = parseTextWithHighlighting(formattedContent, allCitations);
   
@@ -72,7 +82,12 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
       originalCitations: citations.length,
       extractedCitations: allCitations.length,
       segments: segments.length,
-      highlightedSegments: segments.filter(s => s.isHighlighted).length
+      highlightedSegments: segments.filter(s => s.isHighlighted).length,
+      firstFewSegments: segments.slice(0, 3).map(s => ({
+        text: s.text.substring(0, 50) + (s.text.length > 50 ? '...' : ''),
+        isHighlighted: s.isHighlighted,
+        citationId: s.citationId
+      }))
     });
   }
   
