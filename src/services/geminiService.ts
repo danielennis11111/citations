@@ -83,10 +83,19 @@ class GeminiService {
       );
 
       if (!response.ok) {
-        throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
+        const errorText = await response.text();
+        console.error('Gemini API Error Response:', errorText);
+        throw new Error(`Gemini API error: ${response.status} ${response.statusText} - ${errorText}`);
       }
 
       const data = await response.json();
+      
+      // Check for error in response body (sometimes API returns 200 but with error)
+      if (data.error) {
+        console.error('Gemini API returned error:', data.error);
+        throw new Error(`Gemini API error: ${data.error.message || 'Unknown error'}`);
+      }
+      
       return this.parseGeminiResponse(data, message);
     } catch (error) {
       console.error('Gemini API Error:', error);
@@ -172,8 +181,25 @@ Remember:
    * Parse Gemini's response and extract citations
    */
   private parseGeminiResponse(data: any, originalQuery: string): GeminiResponse {
+    // Debug logging to understand the response structure
+    console.log('=== GEMINI API DEBUG ===');
+    console.log('Full API Response:', JSON.stringify(data, null, 2));
+    
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    console.log('Extracted content:', content);
+    console.log('Content length:', content.length);
+    
+    if (!content) {
+      console.warn('No content found in response! Response structure:');
+      console.warn('- data.candidates:', data.candidates);
+      console.warn('- candidates[0]:', data.candidates?.[0]);
+      console.warn('- content:', data.candidates?.[0]?.content);
+      console.warn('- parts:', data.candidates?.[0]?.content?.parts);
+    }
+    
     const citations = this.extractCitationsFromResponse(content, originalQuery);
+    console.log('Extracted citations:', citations);
+    console.log('=== END DEBUG ===');
     
     return {
       content: this.cleanResponseContent(content),
