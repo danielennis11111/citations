@@ -13,9 +13,7 @@ import {
   BookOpen,
   FileText,
   Globe,
-  ExternalLink,
-  User,
-  Bot
+  ExternalLink
 } from 'lucide-react';
 import { Citation } from '../types/index';
 
@@ -389,13 +387,19 @@ const CitationDemo: React.FC = () => {
             {messages.map((message) => (
               <div key={message.id} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 <div className={`max-w-[80%] flex space-x-3 ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    message.role === 'user' ? 'bg-asu-gold-600' : 'bg-gray-600'
-                  }`}>
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200">
                     {message.role === 'user' ? (
-                      <User className="w-4 h-4 text-white" />
+                      <img 
+                        src="/IMG_9725.jpg" 
+                        alt="User avatar" 
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
-                      <Bot className="w-4 h-4 text-white" />
+                      <img 
+                        src="/Image_fx (12).png" 
+                        alt="AI assistant avatar" 
+                        className="w-full h-full object-cover"
+                      />
                     )}
                   </div>
                   
