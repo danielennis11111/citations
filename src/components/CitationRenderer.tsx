@@ -1,18 +1,18 @@
 /**
  * 📚 Citation Renderer - Display Citations with Interactive Source Links
  * 
- * Enhanced component that displays citations with clickable source links,
- * quality metrics, and simplified/debug mode support.
+ * Enhanced component that displays citations with clickable source links
+ * and quality metrics for real AI chat responses.
  */
 
 import React from 'react';
 import { Citation } from '../types/index';
-import { ExternalLink, FileText, Globe, File, Database, Clock, Star, Zap } from 'lucide-react';
+import { ExternalLink, FileText, Globe, File, Database, Clock, Star, Video, Music, Image } from 'lucide-react';
 
 interface CitationRendererProps {
   citations: Citation[];
   showRelevanceScores?: boolean;
-  showIncantations?: boolean;
+  showIncantations?: boolean; // Keep for backward compatibility but not used
   maxPreviewLength?: number;
   className?: string;
 }
@@ -25,14 +25,16 @@ const getSourceIcon = (type: string) => {
       return <Globe className="w-4 h-4 text-blue-500" />;
     case 'document':
       return <FileText className="w-4 h-4 text-green-500" />;
-    case 'rag':
-      return <Database className="w-4 h-4 text-purple-500" />;
+    case 'video':
+      return <Video className="w-4 h-4 text-red-600" />;
+    case 'audio':
+      return <Music className="w-4 h-4 text-purple-500" />;
+    case 'image':
+      return <Image className="w-4 h-4 text-orange-500" />;
     default:
-      return <FileText className="w-4 h-4 text-gray-500" />;
+      return <Database className="w-4 h-4 text-gray-500" />;
   }
 };
-
-
 
 const getRelevanceColor = (relevance: number) => {
   if (relevance >= 0.9) return 'bg-green-500';
@@ -44,20 +46,12 @@ const getRelevanceColor = (relevance: number) => {
 const CitationRenderer: React.FC<CitationRendererProps> = ({
   citations,
   showRelevanceScores = false,
-  showIncantations = false,
   maxPreviewLength = 150,
   className = ''
 }) => {
   const truncateText = (text: string, maxLength: number) => {
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + '...';
-  };
-
-  const formatIncantationName = (incantation: string) => {
-    return incantation
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' ');
   };
 
   return (
@@ -87,15 +81,18 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
                 </div>
                 
                 {/* Source Details */}
-                                 <div className="flex items-center space-x-3 text-xs text-gray-500">
-                   <span className="flex items-center">
-                     <Clock className="w-3 h-3 mr-1" />
-                     {citation.timestamp?.toLocaleDateString() || 'No date'}
-                   </span>
+                <div className="flex items-center space-x-3 text-xs text-gray-500">
+                  <span className="flex items-center">
+                    <Clock className="w-3 h-3 mr-1" />
+                    {citation.timestamp?.toLocaleDateString() || 'No date'}
+                  </span>
                   {citation.page && (
                     <span>Page {citation.page}</span>
                   )}
                   <span className="capitalize">{citation.type}</span>
+                  {citation.author && (
+                    <span>by {citation.author}</span>
+                  )}
                 </div>
               </div>
             </div>
@@ -119,7 +116,7 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
             
             {citation.highlightedText && citation.highlightedText !== citation.content && (
               <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded">
-                <p className="text-xs text-yellow-800 font-medium mb-1">Highlighted excerpt:</p>
+                <p className="text-xs text-yellow-800 font-medium mb-1">Key excerpt:</p>
                 <p className="text-xs text-yellow-700">
                   "{truncateText(citation.highlightedText, 100)}"
                 </p>
@@ -130,24 +127,15 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
           {/* Debug Information */}
           {showRelevanceScores && (
             <div className="flex items-center justify-between pt-3 border-t border-gray-100">
-                             <div className="flex items-center space-x-4 text-xs text-gray-600">
-                 <div className="flex items-center space-x-1">
-                   <Star className="w-3 h-3" />
-                   <span>Quality: {Math.round((citation.quality || 0) * 100)}%</span>
-                 </div>
-                 <div className="flex items-center space-x-1">
-                   <span>Confidence: {Math.round((citation.confidence || 0) * 100)}%</span>
-                 </div>
-               </div>
-              
-              {showIncantations && citation.incantationUsed && (
+              <div className="flex items-center space-x-4 text-xs text-gray-600">
                 <div className="flex items-center space-x-1">
-                  <Zap className="w-3 h-3 text-purple-500" />
-                  <span className="text-xs text-purple-700 font-medium">
-                    {formatIncantationName(citation.incantationUsed)}
-                  </span>
+                  <Star className="w-3 h-3" />
+                  <span>Quality: {Math.round((citation.quality || 0) * 100)}%</span>
                 </div>
-              )}
+                <div className="flex items-center space-x-1">
+                  <span>Confidence: {Math.round((citation.confidence || 0) * 100)}%</span>
+                </div>
+              </div>
             </div>
           )}
 
@@ -172,6 +160,7 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
         <div className="text-center py-8 text-gray-500">
           <FileText className="w-8 h-8 mx-auto mb-2 text-gray-400" />
           <p className="text-sm">No citations available</p>
+          <p className="text-xs">Citations will appear here when the AI references sources</p>
         </div>
       )}
     </div>

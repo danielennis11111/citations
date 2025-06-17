@@ -1,55 +1,21 @@
 /**
- * 🔍 Highlighted Text Component - Interactive RAG Source Highlighting
+ * ✨ Enhanced Highlighted Text Component with Citation Interaction
  * 
- * Highlights text sourced from RAG with clickable citations that show
- * source details and the incantations used to discover the information.
+ * Renders text with interactive highlighting for citations.
+ * Supports click handlers for sidebar navigation and improved UX.
  */
 
 import React, { useState } from 'react';
-import { ExternalLink, Info, Zap, BookOpen } from 'lucide-react';
-import { HighlightedText as HighlightedTextType, Citation, RAGDiscovery } from '../types/index';
+import { ExternalLink, Info, BookOpen } from 'lucide-react';
+import { HighlightedText as HighlightedTextType, Citation, SourceDiscovery } from '../types/index';
 
 interface HighlightedTextProps {
   segments: HighlightedTextType[];
   citations: Citation[];
-  discoveries: RAGDiscovery[];
+  discoveries: SourceDiscovery[];
   onCitationClick?: (citationId: string) => void;
   className?: string;
 }
-
-// Format timestamp
-const formatDate = (date?: Date) => {
-  if (!date) return 'Unknown date';
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric'
-  }).format(date);
-};
-
-// Get incantation display name
-const getIncantationName = (incantation?: string) => {
-  if (!incantation) return 'Semantic Search';
-  
-  // Convert kebab-case to Title Case
-  return incantation
-    .split('-')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
-
-// Get incantation color class
-const getIncantationColor = (incantation?: string) => {
-  const colors: Record<string, string> = {
-    'semantic-search': 'bg-blue-50 text-blue-700 border-blue-200',
-    'chain-of-thought': 'bg-purple-50 text-purple-700 border-purple-200',
-    'expert-persona': 'bg-green-50 text-green-700 border-green-200',
-    'working-backwards': 'bg-amber-50 text-amber-700 border-amber-200',
-    'assumption-reversal': 'bg-pink-50 text-pink-700 border-pink-200'
-  };
-  
-  return colors[incantation || 'semantic-search'] || 'bg-gray-50 text-gray-700 border-gray-200';
-};
 
 const HighlightedText: React.FC<HighlightedTextProps> = ({
   segments,
@@ -76,17 +42,11 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
     return citations.find(c => c.id === id);
   };
 
-  const getDiscoveryById = (id: string): RAGDiscovery | undefined => {
-    return discoveries.find(d => d.results.some(r => r.id === id));
-  };
-
   const renderTooltip = () => {
     if (!hoveredCitation) return null;
 
     const citation = getCitationById(hoveredCitation);
     if (!citation) return null;
-
-    const discovery = getDiscoveryById(hoveredCitation);
 
     return (
       <div 
@@ -120,15 +80,6 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
           {citation.content.substring(0, 120)}
           {citation.content.length > 120 ? '...' : ''}
         </p>
-
-        {discovery && (
-          <div className="flex items-center space-x-1 text-xs text-purple-700 bg-purple-50 rounded px-2 py-1">
-            <Zap className="w-3 h-3" />
-            <span>
-              Found via {discovery.incantationUsed.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ')}
-            </span>
-          </div>
-        )}
 
         <div className="mt-2 text-xs text-gray-500">
           <Info className="w-3 h-3 inline mr-1" />

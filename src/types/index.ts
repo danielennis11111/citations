@@ -1,23 +1,21 @@
 export interface Citation {
   id: string;
   source: string;
-  type: 'rag' | 'knowledge' | 'external' | 'document' | 'web' | 'pdf';
+  type: 'document' | 'web' | 'pdf' | 'video' | 'audio' | 'image';
   content: string;
   relevance: number;
   url?: string;
   page?: number;
   timestamp?: Date;
   documentId?: string;
-  incantationUsed?: string;
   highlightedText?: string;
   confidence?: number;
   quality?: number;
-  // Additional properties for CitationTooltip
+  // Metadata from Gemini API
   title?: string;
   excerpt?: string;
-  documentName?: string;
-  pageNumber?: number;
-  relevanceScore?: number;
+  author?: string;
+  publishedDate?: string;
 }
 
 export interface CitationReference {
@@ -34,11 +32,29 @@ export interface HighlightedText {
   citationId?: string;
 }
 
-export interface RAGDiscovery {
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: Date;
+  citations?: Citation[];
+  model?: string;
+}
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  messages: ChatMessage[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Simplified discovery without incantations
+export interface SourceDiscovery {
   query: string;
-  incantationUsed: string;
   timestamp: Date;
   results: Citation[];
   confidence: number;
   context: string;
+  searchMethod: 'semantic' | 'keyword' | 'hybrid';
 } 
