@@ -6,12 +6,20 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
+import { 
+  Send, 
+  Settings, 
+  Key, 
+  Eye, 
+  EyeOff, 
+  BookOpen, 
+  MessageSquare, 
+  Loader, 
+  AlertCircle
+} from 'lucide-react';
 import { ChatMessage } from '../types/index';
-import CitationRenderer from './CitationRenderer';
-import HighlightedText from './HighlightedText';
-import { parseTextWithHighlighting } from '../utils/citationParser';
 import GeminiService, { GeminiConfig } from '../services/geminiService';
-import { Send, Key, MessageSquare, BookOpen, Settings, Eye, EyeOff, Loader, AlertCircle } from 'lucide-react';
+import CitationRenderer from './CitationRenderer';
 
 const CitationDemo: React.FC = () => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -129,10 +137,7 @@ const CitationDemo: React.FC = () => {
     }
   };
 
-  const handleCitationClick = (citationId: string) => {
-    setActiveTab('sources');
-    // Could scroll to specific citation here
-  };
+  // Citation click handler moved to CitationRenderer component
 
   // Future feature for source search
   // const handleSourceSearch = async (query: string) => {
@@ -200,9 +205,6 @@ const CitationDemo: React.FC = () => {
 
   const renderMessages = () => {
     return messages.map((message) => {
-      const { segments } = message.citations 
-        ? parseTextWithHighlighting(message.content, message.citations, [])
-        : { segments: [{ text: message.content, isHighlighted: false }] };
 
       return (
         <div key={message.id} className={`mb-4 ${message.role === 'user' ? 'text-right' : 'text-left'}`}>
@@ -212,12 +214,14 @@ const CitationDemo: React.FC = () => {
               : 'bg-white border border-gray-200'
           }`}>
             {message.role === 'assistant' ? (
-              <HighlightedText
-                segments={segments}
-                citations={message.citations || []}
-                discoveries={[]}
-                onCitationClick={handleCitationClick}
-                className="text-gray-800"
+              <CitationRenderer
+                content={message.content}
+                citations={allCitations}
+                debugMode={isDebugMode}
+                onCitationClick={(citation) => {
+                  // Handle citation click - could open in sidebar or show more details
+                  console.log('Citation clicked:', citation);
+                }}
               />
             ) : (
               <p>{message.content}</p>
@@ -421,11 +425,15 @@ const CitationDemo: React.FC = () => {
                         Sources from conversation • {isDebugMode ? 'Debug view' : 'Simple view'}
                       </div>
                       <CitationRenderer
+                        content="" 
                         citations={allCitations}
-                        showRelevanceScores={isDebugMode}
-                        showIncantations={false}
-                        maxPreviewLength={isDebugMode ? 200 : 120}
-                        className="space-y-3"
+                        debugMode={isDebugMode}
+                        onCitationClick={(citation) => {
+                          // Handle citation click - could open URL or show more details
+                          if (citation.url) {
+                            window.open(citation.url, '_blank');
+                          }
+                        }}
                       />
                     </>
                   ) : (

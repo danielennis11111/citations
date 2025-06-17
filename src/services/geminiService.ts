@@ -312,6 +312,60 @@ Please provide a comprehensive answer with proper source attribution:`;
       searchMethod: 'semantic'
     };
   }
+
+  /**
+   * Generate chat response using sendMessage with enhanced formatting
+   */
+  async generateChatResponse(userMessage: string, conversationHistory: ChatMessage[] = []): Promise<{
+    content: string;
+    citations: Citation[];
+    confidence: number;
+  }> {
+    try {
+      // Use the existing sendMessage method
+      const response = await this.sendMessage(userMessage, conversationHistory, true);
+      
+      // Enhanced content formatting
+      const enhancedContent = this.enhanceContentFormatting(response.content);
+      
+      return {
+        content: enhancedContent,
+        citations: response.citations,
+        confidence: response.confidence
+      };
+    } catch (error) {
+      console.error('Gemini API Error:', error);
+      throw new Error(`Failed to generate response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Enhanced content formatting with better markdown and findings handling
+   */
+  private enhanceContentFormatting(content: string): string {
+    let formatted = content;
+
+    // Hide the word "finding" with bold formatting (**finding** becomes **discovery**)
+    formatted = formatted.replace(/\*\*finding\*\*/gi, '**discovery**');
+    formatted = formatted.replace(/\bfinding\b/gi, '**discovery**');
+    
+    // Enhance bullet points and lists
+    formatted = formatted.replace(/^\* /gm, '• ');
+    formatted = formatted.replace(/^- /gm, '• ');
+    
+    // Improve section headers
+    formatted = formatted.replace(/^(#{1,3})\s*(.+)$/gm, '$1 **$2**');
+    
+    // Enhanced emphasis formatting
+    formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '**$1**');
+    formatted = formatted.replace(/\*([^*]+)\*/g, '*$1*');
+    
+    // Clean up extra whitespace
+    formatted = formatted.replace(/\n{3,}/g, '\n\n');
+    formatted = formatted.trim();
+    
+    return formatted;
+  }
 }
 
 export default GeminiService; 

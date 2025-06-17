@@ -50,11 +50,18 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
 
     return (
       <div 
-        className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-lg p-4 max-w-sm pointer-events-none"
+        className="fixed z-50 bg-white border border-gray-200 rounded-lg shadow-xl p-4 max-w-sm cursor-pointer hover:shadow-2xl transition-shadow"
         style={{ 
           left: tooltipPosition.x + 10, 
           top: tooltipPosition.y - 10,
           transform: 'translate(0, -100%)'
+        }}
+        onClick={() => {
+          // Make tooltip clickable - open source or trigger sidebar
+          if (citation.url) {
+            window.open(citation.url, '_blank');
+          }
+          handleCitationClick(hoveredCitation);
         }}
       >
         <div className="flex items-start space-x-2 mb-2">
@@ -81,9 +88,9 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
           {citation.content.length > 120 ? '...' : ''}
         </p>
 
-        <div className="mt-2 text-xs text-gray-500">
+        <div className="mt-2 text-xs text-blue-600 font-medium flex items-center">
           <Info className="w-3 h-3 inline mr-1" />
-          Click to view details in sidebar
+          Click to open source or view details
         </div>
       </div>
     );
@@ -94,7 +101,7 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
       {segments.map((segment, index) => {
         if (segment.isHighlighted && segment.citationId) {
           const citation = getCitationById(segment.citationId);
-          if (!citation) return <span key={index}>{segment.text}</span>;
+          if (!citation) return <span key={index}>{renderFormattedText(segment.text)}</span>;
 
           return (
             <span
@@ -105,17 +112,105 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
               onClick={() => handleCitationClick(segment.citationId!)}
               title="Click to view source details"
             >
-              {segment.text}
+              {renderFormattedText(segment.text)}
             </span>
           );
         }
 
-        return <span key={index}>{segment.text}</span>;
+        return <span key={index}>{renderFormattedText(segment.text)}</span>;
       })}
 
       {renderTooltip()}
     </div>
   );
 };
+
+/**
+ * Render text with markdown formatting support
+ */
+function renderFormattedText(text: string): React.ReactNode {
+  // Handle bold text **text**
+  const boldRegex = /\*\*(.*?)\*\*/g;
+  let lastIndex = 0;
+  const parts: React.ReactNode[] = [];
+  let match;
+  let keyIndex = 0;
+
+  while ((match = boldRegex.exec(text)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      const beforeText = text.substring(lastIndex, match.index);
+      parts.push(renderItalicText(beforeText, keyIndex++));
+    }
+    
+    // Add bold text
+    parts.push(
+      <strong key={`bold-${keyIndex++}`} className="font-semibold text-gray-900">
+        {renderItalicText(match[1], keyIndex++)}
+      </strong>
+    );
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add remaining text
+  if (lastIndex < text.length) {
+    const remainingText = text.substring(lastIndex);
+    parts.push(renderItalicText(remainingText, keyIndex++));
+  }
+  
+  return parts.length > 1 ? <>{parts}</> : renderItalicText(text, 0);
+}
+
+/**
+ * Render text with italic formatting support
+ */
+function renderItalicText(text: string, startKey: number): React.ReactNode {
+  const italicRegex = /\*(.*?)\*/g;
+  let lastIndex = 0;
+  const parts: React.ReactNode[] = [];
+  let match;
+  let keyIndex = startKey;
+
+  while ((match = italicRegex.exec(text)) !== null) {
+    // Add text before the match
+    if (match.index > lastIndex) {
+      const beforeText = text.substring(lastIndex, match.index);
+      parts.push(renderLineBreaks(beforeText, keyIndex++));
+    }
+    
+    // Add italic text
+    parts.push(
+      <em key={`italic-${keyIndex++}`} className="italic text-gray-800">
+        {renderLineBreaks(match[1], keyIndex++)}
+      </em>
+    );
+    
+    lastIndex = match.index + match[0].length;
+  }
+  
+  // Add remaining text
+  if (lastIndex < text.length) {
+    const remainingText = text.substring(lastIndex);
+    parts.push(renderLineBreaks(remainingText, keyIndex++));
+  }
+  
+  return parts.length > 1 ? <>{parts}</> : renderLineBreaks(text, 0);
+}
+
+/**
+ * Render line breaks and basic text formatting
+ */
+function renderLineBreaks(text: string, key: number): React.ReactNode {
+  const lines = text.split('\n');
+  if (lines.length === 1) return text;
+  
+  return lines.map((line, index) => (
+    <React.Fragment key={`line-${key}-${index}`}>
+      {line}
+      {index < lines.length - 1 && <br />}
+    </React.Fragment>
+  ));
+}
 
 export default HighlightedText; 

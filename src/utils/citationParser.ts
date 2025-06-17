@@ -8,7 +8,7 @@
 import { Citation, CitationReference, HighlightedText, SourceDiscovery } from '../types/index';
 
 /**
- * Parse text and highlight cited content
+ * Parse text and highlight cited content - Enhanced for Gemini citation format
  */
 export function parseTextWithHighlighting(
   text: string,
@@ -18,12 +18,133 @@ export function parseTextWithHighlighting(
   segments: HighlightedText[];
   references: CitationReference[];
 } {
+  // First, extract citation markers and replace them with placeholders
+  const citationMarkerPattern = /\[Source:\s*([^|]+)\s*\|\s*URL:\s*([^|]+)\s*\|\s*Date:\s*([^|]+)\s*\|\s*Confidence:\s*([^\]]+)\]/g;
+  const citationMarkers: Array<{
+    match: string;
+    start: number;
+    end: number;
+    citation: Citation;
+  }> = [];
+  
+  let match;
+  while ((match = citationMarkerPattern.exec(text)) !== null) {
+    const [fullMatch, title, url, date, confidence] = match;
+    
+    // Create a citation object from the marker
+    const citation: Citation = {
+      id: `citation-${citationMarkers.length + 1}`,
+      source: title.trim(),
+      type: determineSourceType(url.trim()),
+      content: `Citation from ${title.trim()}`,
+      relevance: parseConfidence(confidence.trim()),
+      url: url.trim(),
+      timestamp: parseDate(date.trim()),
+      confidence: parseConfidence(confidence.trim()),
+      quality: calculateQualityFromUrl(url.trim()),
+      highlightedText: extractSentenceBeforeCitation(text, match.index!)
+    };
+    
+    citationMarkers.push({
+      match: fullMatch,
+      start: match.index!,
+      end: match.index! + fullMatch.length,
+      citation
+    });
+  }
+  
+  // If we found citation markers, process them
+  if (citationMarkers.length > 0) {
+    return parseTextWithMarkers(text, citationMarkers);
+  }
+  
+  // Fallback to original citation matching for pre-existing citations
+  return parseTextWithExistingCitations(text, citations);
+}
+
+/**
+ * Parse text that contains citation markers
+ */
+function parseTextWithMarkers(
+  text: string,
+  citationMarkers: Array<{
+    match: string;
+    start: number;
+    end: number;
+    citation: Citation;
+  }>
+): {
+  segments: HighlightedText[];
+  references: CitationReference[];
+} {
   const segments: HighlightedText[] = [];
   const references: CitationReference[] = [];
   
   let currentIndex = 0;
   
-  // Enhanced approach: look for quoted content that matches citation sources
+  for (const marker of citationMarkers) {
+    // Find the sentence that precedes this citation
+    const sentenceStart = findSentenceStart(text, marker.start);
+    
+    // Add non-highlighted text before the sentence
+    if (sentenceStart > currentIndex) {
+      segments.push({
+        text: text.substring(currentIndex, sentenceStart),
+        isHighlighted: false
+      });
+    }
+    
+    // Add the highlighted sentence (without the citation marker)
+    const sentenceEnd = marker.start;
+    if (sentenceEnd > sentenceStart) {
+      const sentenceText = text.substring(sentenceStart, sentenceEnd).trim();
+      if (sentenceText) {
+        segments.push({
+          text: sentenceText,
+          isHighlighted: true,
+          citationId: marker.citation.id
+        });
+        
+        references.push({
+          citationId: marker.citation.id,
+          inlineText: sentenceText,
+          position: sentenceStart,
+          highlightStart: sentenceStart,
+          highlightEnd: sentenceEnd
+        });
+      }
+    }
+    
+    // Skip the citation marker itself
+    currentIndex = marker.end;
+  }
+  
+  // Add remaining text
+  if (currentIndex < text.length) {
+    segments.push({
+      text: text.substring(currentIndex),
+      isHighlighted: false
+    });
+  }
+  
+  return { segments, references };
+}
+
+/**
+ * Fallback parser for existing citations (original method)
+ */
+function parseTextWithExistingCitations(
+  text: string,
+  citations: Citation[]
+): {
+  segments: HighlightedText[];
+  references: CitationReference[];
+} {
+  const segments: HighlightedText[] = [];
+  const references: CitationReference[] = [];
+  
+  let currentIndex = 0;
+  
   for (const citation of citations) {
     const highlightText = citation.highlightedText || citation.content.substring(0, 100);
     
@@ -32,11 +153,10 @@ export function parseTextWithHighlighting(
     
     // If no exact match, try fuzzy matching with key phrases
     if (matchIndex === -1) {
-      // Extract key phrases (4+ word sequences)
       const keyPhrases = extractKeyPhrases(highlightText);
       
       for (const phrase of keyPhrases) {
-        if (phrase.length >= 15) { // Only use substantial phrases
+        if (phrase.length >= 15) {
           const phraseIndex = text.toLowerCase().indexOf(phrase.toLowerCase());
           if (phraseIndex !== -1) {
             matchIndex = phraseIndex;
@@ -63,7 +183,6 @@ export function parseTextWithHighlighting(
         citationId: citation.id
       });
       
-      // Add reference
       references.push({
         citationId: citation.id,
         inlineText: text.substring(matchIndex, Math.min(matchEnd, text.length)),
@@ -93,6 +212,64 @@ export function parseTextWithHighlighting(
   }
   
   return { segments, references };
+}
+
+/**
+ * Helper functions
+ */
+function findSentenceStart(text: string, fromIndex: number): number {
+  // Look backwards for sentence delimiters
+  const sentenceDelimiters = /[.!?]\s+/g;
+  let lastDelimiterEnd = 0;
+  
+  let match;
+  while ((match = sentenceDelimiters.exec(text)) !== null) {
+    if (match.index + match[0].length >= fromIndex) {
+      break;
+    }
+    lastDelimiterEnd = match.index + match[0].length;
+  }
+  
+  return lastDelimiterEnd;
+}
+
+function extractSentenceBeforeCitation(text: string, citationIndex: number): string {
+  const sentenceStart = findSentenceStart(text, citationIndex);
+  return text.substring(sentenceStart, citationIndex).trim();
+}
+
+function determineSourceType(url: string): Citation['type'] {
+  if (url.includes('youtube.com') || url.includes('youtu.be')) return 'video';
+  if (url.includes('.pdf')) return 'pdf';
+  if (url.includes('spotify.com') || url.includes('soundcloud.com')) return 'audio';
+  if (url.includes('.jpg') || url.includes('.png') || url.includes('.gif')) return 'image';
+  if (url.includes('arxiv.org') || url.includes('docs.') || url.includes('.doc')) return 'document';
+  return 'web';
+}
+
+function parseConfidence(confidence: string): number {
+  switch (confidence.toLowerCase()) {
+    case 'high': return 0.9;
+    case 'medium': return 0.7;
+    case 'low': return 0.5;
+    default: return 0.6;
+  }
+}
+
+function parseDate(dateStr: string): Date {
+  const parsed = new Date(dateStr);
+  return isNaN(parsed.getTime()) ? new Date() : parsed;
+}
+
+function calculateQualityFromUrl(url: string): number {
+  let quality = 0.5;
+  
+  if (url.includes('.edu') || url.includes('.gov')) quality += 0.2;
+  if (url.includes('arxiv.org') || url.includes('scholar.google.com')) quality += 0.3;
+  if (url.includes('wikipedia.org')) quality += 0.1;
+  if (url.includes('ibm.com') || url.includes('nature.com') || url.includes('science.org')) quality += 0.2;
+  
+  return Math.min(quality, 1.0);
 }
 
 /**
