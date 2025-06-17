@@ -180,7 +180,7 @@ Please provide a comprehensive answer with proper source attribution:`;
 
     // If no explicit citations found, try to extract URLs and create basic citations
     if (citations.length === 0) {
-      const urlPattern = /https?:\/\/[^\s\)]+/g;
+      const urlPattern = /https?:\/\/[^\s)]+/g;
       const urls = content.match(urlPattern) || [];
       
       urls.forEach((url, index) => {

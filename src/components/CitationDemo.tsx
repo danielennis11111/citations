@@ -6,7 +6,7 @@
  */
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Citation, ChatMessage, SourceDiscovery } from '../types/index';
+import { ChatMessage } from '../types/index';
 import CitationRenderer from './CitationRenderer';
 import HighlightedText from './HighlightedText';
 import { parseTextWithHighlighting } from '../utils/citationParser';
@@ -29,8 +29,8 @@ const CitationDemo: React.FC = () => {
   const [apiKey, setApiKey] = useState('');
   const [geminiService, setGeminiService] = useState<GeminiService | null>(null);
   
-  // Selected data
-  const [selectedSources, setSelectedSources] = useState<SourceDiscovery | null>(null);
+  // Selected data (for future features)
+  // const [selectedSources, setSelectedSources] = useState<SourceDiscovery | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
@@ -134,20 +134,21 @@ const CitationDemo: React.FC = () => {
     // Could scroll to specific citation here
   };
 
-  const handleSourceSearch = async (query: string) => {
-    if (!geminiService) return;
-    
-    setIsLoading(true);
-    try {
-      const sources = await geminiService.searchSources(query);
-      setSelectedSources(sources);
-      setActiveTab('search');
-    } catch (err) {
-      setError(`Failed to search sources: ${err}`);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Future feature for source search
+  // const handleSourceSearch = async (query: string) => {
+  //   if (!geminiService) return;
+  //   
+  //   setIsLoading(true);
+  //   try {
+  //     const sources = await geminiService.searchSources(query);
+  //     setSelectedSources(sources);
+  //     setActiveTab('search');
+  //   } catch (err) {
+  //     setError(`Failed to search sources: ${err}`);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   // Get all citations from all messages
   const allCitations = messages.flatMap(msg => msg.citations || []);
@@ -393,18 +394,20 @@ const CitationDemo: React.FC = () => {
                   <BookOpen className="w-4 h-4 mr-1.5" />
                   Sources ({allCitations.length})
                 </button>
-                {selectedSources && (
-                  <button
-                    onClick={() => setActiveTab('search')}
-                    className={`flex items-center px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
-                      activeTab === 'search'
-                        ? 'bg-blue-100 text-blue-700 border border-blue-200' 
-                        : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
-                    }`}
-                  >
-                    Search Results
-                  </button>
-                )}
+                                 {/* Future feature: Search Results tab
+                 {selectedSources && (
+                   <button
+                     onClick={() => setActiveTab('search')}
+                     className={`flex items-center px-3 py-1.5 text-xs font-medium rounded-lg transition-colors ${
+                       activeTab === 'search'
+                         ? 'bg-blue-100 text-blue-700 border border-blue-200' 
+                         : 'text-gray-600 hover:text-gray-800 hover:bg-gray-100'
+                     }`}
+                   >
+                     Search Results
+                   </button>
+                 )}
+                 */}
               </div>
             </div>
 
@@ -435,20 +438,22 @@ const CitationDemo: React.FC = () => {
                 </div>
               )}
               
-              {activeTab === 'search' && selectedSources && (
-                <div className="space-y-4">
-                  <div className="text-xs text-gray-500 mb-3">
-                    Search: "{selectedSources.query}"
-                  </div>
-                  <CitationRenderer
-                    citations={selectedSources.results}
-                    showRelevanceScores={isDebugMode}
-                    showIncantations={false}
-                    maxPreviewLength={120}
-                    className="space-y-3"
-                  />
-                </div>
-              )}
+                             {/* Future feature: Search results
+               {activeTab === 'search' && selectedSources && (
+                 <div className="space-y-4">
+                   <div className="text-xs text-gray-500 mb-3">
+                     Search: "{selectedSources.query}"
+                   </div>
+                   <CitationRenderer
+                     citations={selectedSources.results}
+                     showRelevanceScores={isDebugMode}
+                     showIncantations={false}
+                     maxPreviewLength={120}
+                     className="space-y-3"
+                   />
+                 </div>
+               )}
+               */}
             </div>
           </div>
         </div>
