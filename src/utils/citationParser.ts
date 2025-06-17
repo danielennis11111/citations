@@ -303,7 +303,7 @@ function parseEndOfSentenceCitations(
     const textBeforeThisCitation = cleanText.substring(0, originalCitationStart);
     
     // Look for sentence start markers: period + space, start of text, or bullet point
-    const sentenceMarkers = /[.!?]\s+|^|\n\s*[•\-\*]\s*/g;
+    const sentenceMarkers = /[.!?]\s+|^|\n\s*[•\-*]\s*/g;
     let sentenceStart = 0;
     let sentenceMatch;
     

@@ -29,7 +29,7 @@ const CitationDemo: React.FC = () => {
   
   // UI State
   const [activeTab, setActiveTab] = useState('sources');
-  const [isDebugMode, setIsDebugMode] = useState(true);
+  const [isDebugMode, setIsDebugMode] = useState(false);
   const [sidebarVisible, setSidebarVisible] = useState(true);
   const [showApiKeyInput, setShowApiKeyInput] = useState(false);
   
@@ -72,18 +72,18 @@ const CitationDemo: React.FC = () => {
     }
     
     // Test citation parsing
-    import('../utils/citationParser').then(module => {
-      module.testCitationParsing();
+    // import('../utils/citationParser').then(module => {
+    //   module.testCitationParsing();
       
-      // Test with user's specific example
-      const userExample = "Superposition: Qubits can exist in a state of superposition, meaning they can represent 0, 1, or both simultaneously . [CITE:3]Formally, a qubit is a unit vector in a two-dimensional complex vector space. This allows quantum computers to explore many possibilities concurrently.";
+    //   // Test with user's specific example
+    //   const userExample = "Superposition: Qubits can exist in a state of superposition, meaning they can represent 0, 1, or both simultaneously . [CITE:3]Formally, a qubit is a unit vector in a two-dimensional complex vector space. This allows quantum computers to explore many possibilities concurrently.";
       
-      console.log('=== Testing User Example ===');
-      console.log('Input:', userExample);
-      const result = module.parseTextWithHighlighting(userExample, []);
-      console.log('Parsed segments:', result.segments);
-      console.log('Highlighted segments:', result.segments.filter(s => s.isHighlighted));
-    });
+    //   console.log('=== Testing User Example ===');
+    //   console.log('Input:', userExample);
+    //   const result = module.parseTextWithHighlighting(userExample, []);
+    //   console.log('Parsed segments:', result.segments);
+    //   console.log('Highlighted segments:', result.segments.filter(s => s.isHighlighted));
+    // });
   }, []);
 
   const initializeGeminiService = (key: string) => {
