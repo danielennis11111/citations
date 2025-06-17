@@ -6,12 +6,15 @@ on:
   workflow_dispatch: # Allow manual trigger
 
 permissions:
-  contents: write # Grant write permissions for the GITHUB_TOKEN
+  contents: read
   pages: write
   id-token: write
 
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     
     steps:
@@ -31,10 +34,16 @@ jobs:
       run: npm run build
       
     - name: List build output
-      run: ls -la build/ # Add this step to verify build directory contents
+      run: ls -la build/
       
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
+    - name: Setup Pages
+      uses: actions/configure-pages@v4
+      
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v3
       with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: ./build 
+        path: ./build
+        
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v4 
