@@ -99,6 +99,11 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
   return (
     <div className={`relative ${className}`}>
       {segments.map((segment, index) => {
+        // Check if this segment is part of a callout section (between --- markers)
+        const isCalloutSection = segment.text.includes('📋') || 
+                                (index > 0 && segments[index - 1]?.text.trim() === '---') ||
+                                (index < segments.length - 1 && segments[index + 1]?.text.trim() === '---');
+        
         if (segment.isHighlighted && segment.citationId) {
           const citation = getCitationById(segment.citationId);
           if (!citation) return <span key={index}>{renderFormattedText(segment.text)}</span>;
@@ -117,6 +122,15 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
           );
         }
 
+        // Apply callout styling for special sections
+        if (isCalloutSection && !segment.text.trim().match(/^---$/)) {
+          return (
+            <div key={index} className="bg-blue-50 border-l-4 border-blue-400 p-4 my-4 rounded-r-lg">
+              {renderFormattedText(segment.text)}
+            </div>
+          );
+        }
+
         return <span key={index}>{renderFormattedText(segment.text)}</span>;
       })}
 
@@ -129,6 +143,47 @@ const HighlightedText: React.FC<HighlightedTextProps> = ({
  * Render text with markdown formatting support
  */
 function renderFormattedText(text: string): React.ReactNode {
+  // Handle horizontal rules first
+  if (text.trim() === '---') {
+    return <hr className="border-gray-300 my-4" />;
+  }
+
+  // Handle headers
+  const headerMatch = text.match(/^(#{1,6})\s+(.+)$/);
+  if (headerMatch) {
+    const [, hashes, content] = headerMatch;
+    const level = hashes.length;
+    const className = getHeaderClassName(level);
+    const HeaderTag = `h${Math.min(level, 6)}` as keyof JSX.IntrinsicElements;
+    
+    return React.createElement(HeaderTag, 
+      { className }, 
+      renderFormattedText(content)
+    );
+  }
+
+  // Handle bullet points
+  if (text.match(/^• /)) {
+    return (
+      <div className="flex items-start space-x-2 my-1">
+        <span className="text-blue-600 font-bold mt-1">•</span>
+        <span>{renderFormattedText(text.substring(2))}</span>
+      </div>
+    );
+  }
+
+  // Handle numbered lists
+  const numberedMatch = text.match(/^(\d+)\.\s+(.+)$/);
+  if (numberedMatch) {
+    const [, number, content] = numberedMatch;
+    return (
+      <div className="flex items-start space-x-2 my-1">
+        <span className="text-blue-600 font-semibold mt-0.5 min-w-6">{number}.</span>
+        <span>{renderFormattedText(content)}</span>
+      </div>
+    );
+  }
+
   // Handle bold text **text**
   const boldRegex = /\*\*(.*?)\*\*/g;
   let lastIndex = 0;
@@ -160,6 +215,28 @@ function renderFormattedText(text: string): React.ReactNode {
   }
   
   return parts.length > 1 ? <>{parts}</> : renderItalicText(text, 0);
+}
+
+/**
+ * Get header className based on level
+ */
+function getHeaderClassName(level: number): string {
+  switch (level) {
+    case 1:
+      return 'text-2xl font-bold text-gray-900 mt-6 mb-4 border-b border-gray-200 pb-2';
+    case 2:
+      return 'text-xl font-bold text-gray-900 mt-5 mb-3';
+    case 3:
+      return 'text-lg font-semibold text-gray-800 mt-4 mb-2';
+    case 4:
+      return 'text-base font-semibold text-gray-800 mt-3 mb-2';
+    case 5:
+      return 'text-sm font-semibold text-gray-700 mt-2 mb-1';
+    case 6:
+      return 'text-sm font-medium text-gray-700 mt-2 mb-1';
+    default:
+      return 'text-base font-medium text-gray-800 mt-2 mb-1';
+  }
 }
 
 /**

@@ -43,18 +43,19 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
   return (
     <div className="space-y-6">
       {/* Enhanced formatted content with citations */}
-      <div className="prose prose-sm max-w-none">
+      <div className="prose prose-sm max-w-none text-gray-800 leading-relaxed">
         <HighlightedText 
           segments={segments}
           citations={allCitations}
           discoveries={[]}
           onCitationClick={handleCitationIdClick}
+          className="space-y-3"
         />
       </div>
       
       {/* Citation List */}
       {allCitations.length > 0 && (
-        <div className="border-t pt-4">
+        <div className="border-t border-gray-200 pt-4 bg-gray-50 rounded-lg p-4 mt-6">
           <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
             <Bookmark size={14} />
             Sources ({allCitations.length})
@@ -85,6 +86,21 @@ function enhanceMarkdownFormatting(content: string): string {
   formatted = formatted.replace(/\*\*(finding|findings)\*\*/gi, '**discovery**');
   formatted = formatted.replace(/\b(finding|findings)\b/gi, '**discovery**');
   
+  // Auto-detect and format main sections
+  formatted = formatted.replace(/\*\*(General Trends & Key Developments|Specific Recent Developments|Key Developments|Recent Developments)\*\*/gi, '## **$1**');
+  
+  // Format special callout sections
+  formatted = formatted.replace(/\*\*(Confidence Levels?|Disclaimer|Note|Important)\*\*/gi, '### **📋 $1**');
+  
+  // Add callout formatting for confidence and disclaimer sections
+  formatted = formatted.replace(/(### \*\*📋 Confidence Levels?\*\*[\s\S]*?)(?=\n### |\n## |$)/g, (match) => {
+    return `\n---\n${match.trim()}\n---\n`;
+  });
+  
+  formatted = formatted.replace(/(### \*\*📋 Disclaimer\*\*[\s\S]*?)(?=\n### |\n## |$)/g, (match) => {
+    return `\n---\n${match.trim()}\n---\n`;
+  });
+  
   // Enhanced header formatting
   formatted = formatted.replace(/^(#{1,6})\s*(.+)$/gm, (match, hashes, title) => {
     return `${hashes} **${title.trim()}**`;
@@ -102,7 +118,8 @@ function enhanceMarkdownFormatting(content: string): string {
   // Better numbered lists
   formatted = formatted.replace(/^(\d+)\.\s+/gm, '$1. ');
   
-  // Clean up extra whitespace
+  // Add proper spacing around sections
+  formatted = formatted.replace(/^(#{1,6})/gm, '\n$1');
   formatted = formatted.replace(/\n{3,}/g, '\n\n');
   formatted = formatted.trim();
   

@@ -114,20 +114,46 @@ class GeminiService {
     }
 
     if (includeCitations) {
-      prompt += `You are a helpful AI assistant that provides accurate, well-sourced information. When you make factual claims, you should:
+      prompt += `You are a helpful AI assistant that provides accurate, well-sourced information with professional formatting. 
 
-1. Provide specific, verifiable sources when possible
-2. Include URLs for web sources
-3. Mention publication dates for recent information
-4. Indicate your confidence level in the information
-5. Clearly distinguish between verified facts and general knowledge
+FORMATTING REQUIREMENTS:
+1. Use clear section headers with ## for main topics and ### for subtopics
+2. Use bullet points (•) for lists and key points
+3. Use **bold** for important terms and concepts
+4. Use *italics* for emphasis and examples
+5. Structure your response with clear sections and proper spacing
 
-Format any sources you reference like this:
-[Source: Title/Description | URL: https://example.com | Date: YYYY-MM-DD | Confidence: High/Medium/Low]
+CITATION REQUIREMENTS:
+When you make factual claims, you MUST provide specific, verifiable sources using this exact format:
+[Source: Article/Paper Title | URL: https://example.com | Date: YYYY-MM-DD | Confidence: High/Medium/Low]
 
-User question: ${message}
+EXAMPLE FORMAT:
+## **Recent AI Developments**
 
-Please provide a comprehensive answer with proper source attribution:`;
+### **Large Language Models**
+Recent advancements in large language models have shown significant improvements in reasoning capabilities. **GPT-4** and **Claude** represent major breakthroughs in AI reasoning and safety.
+
+[Source: GPT-4 Technical Report | URL: https://arxiv.org/abs/2303.08774 | Date: 2023-03-15 | Confidence: High]
+
+• Key improvement: Enhanced reasoning abilities
+• Impact: Better problem-solving and code generation
+• Applications: Scientific research, education, creative writing
+
+### **Computer Vision Advances**
+The field has seen remarkable progress in *multimodal understanding* and *image generation*.
+
+[Source: DALL-E 3 Research Paper | URL: https://cdn.openai.com/papers/dall-e-3.pdf | Date: 2023-09-20 | Confidence: High]
+
+Please provide comprehensive, well-structured answers with proper source attribution for the following question:
+
+${message}
+
+Remember to:
+- Format your response professionally with headers and sections
+- Cite specific sources with URLs and dates
+- Use bold/italic formatting appropriately
+- Include confidence levels for each source
+- Structure information clearly with bullet points and sections`;
     } else {
       prompt += `User: ${message}\n\nAssistant:`;
     }
@@ -346,22 +372,44 @@ Please provide a comprehensive answer with proper source attribution:`;
     let formatted = content;
 
     // Hide the word "finding" with bold formatting (**finding** becomes **discovery**)
-    formatted = formatted.replace(/\*\*finding\*\*/gi, '**discovery**');
-    formatted = formatted.replace(/\bfinding\b/gi, '**discovery**');
+    formatted = formatted.replace(/\*\*(finding|findings)\*\*/gi, '**discovery**');
+    formatted = formatted.replace(/\b(finding|findings)\b/gi, '**discovery**');
     
-    // Enhance bullet points and lists
+    // Enhanced section header formatting
+    formatted = formatted.replace(/^(#{1,6})\s*(.+)$/gm, (match, hashes, title) => {
+      return `${hashes} **${title.trim()}**`;
+    });
+    
+    // Better bullet point formatting with consistent spacing
     formatted = formatted.replace(/^\* /gm, '• ');
     formatted = formatted.replace(/^- /gm, '• ');
+    formatted = formatted.replace(/^\+ /gm, '• ');
     
-    // Improve section headers
-    formatted = formatted.replace(/^(#{1,3})\s*(.+)$/gm, '$1 **$2**');
+    // Enhanced numbered lists with better spacing
+    formatted = formatted.replace(/^(\d+)\.\s+/gm, '$1. ');
     
-    // Enhanced emphasis formatting
+    // Special formatting for key sections
+    formatted = formatted.replace(/\*\*(General Trends & Key Developments|Specific Recent Developments|Key Developments|Recent Developments)\*\*/gi, '## **$1**');
+    formatted = formatted.replace(/\*\*(Confidence Levels?|Disclaimer|Note|Important)\*\*/gi, '### **$1**');
+    
+    // Format confidence and disclaimer sections with callout styling
+    formatted = formatted.replace(/(### \*\*Confidence Levels?\*\*[\s\S]*?)(?=\n### |\n## |$)/g, (match) => {
+      return `\n---\n\n${match.trim()}\n\n---\n`;
+    });
+    
+    formatted = formatted.replace(/(### \*\*Disclaimer\*\*[\s\S]*?)(?=\n### |\n## |$)/g, (match) => {
+      return `\n---\n\n${match.trim()}\n\n---\n`;
+    });
+    
+    // Enhanced bold and italic formatting
     formatted = formatted.replace(/\*\*([^*]+)\*\*/g, '**$1**');
     formatted = formatted.replace(/\*([^*]+)\*/g, '*$1*');
     
-    // Clean up extra whitespace
+    // Better spacing around sections
+    formatted = formatted.replace(/^(#{1,6})/gm, '\n$1');
     formatted = formatted.replace(/\n{3,}/g, '\n\n');
+    
+    // Clean up and structure
     formatted = formatted.trim();
     
     return formatted;
