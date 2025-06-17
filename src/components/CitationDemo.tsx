@@ -59,6 +59,24 @@ const CitationDemo: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  useEffect(() => {
+    // Load saved session
+    const savedSession = localStorage.getItem('gemini-chat-session');
+    if (savedSession) {
+      try {
+        const session = JSON.parse(savedSession);
+        setMessages(session.messages || []);
+      } catch (error) {
+        console.error('Failed to load saved session:', error);
+      }
+    }
+    
+    // Test citation parsing
+    import('../utils/citationParser').then(module => {
+      module.testCitationParsing();
+    });
+  }, []);
+
   const initializeGeminiService = (key: string) => {
     try {
       const config: GeminiConfig = {

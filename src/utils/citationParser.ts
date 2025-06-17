@@ -35,53 +35,140 @@ export function parseTextWithHighlighting(
 }
 
 /**
- * Parse inline citations in the format [CITE:X]text[/CITE:X] with [Source:X | ...] references
+ * Parse inline citations in the format [CITE:X]text[/CITE:X] with simplified source references
  */
 function parseInlineCitations(text: string): {
   segments: HighlightedText[];
   references: CitationReference[];
 } {
-  const segments: HighlightedText[] = [];
-  const references: CitationReference[] = [];
+  // const segments: HighlightedText[] = [];
+  // const references: CitationReference[] = [];
   const extractedCitations: Citation[] = [];
   
-  // First extract source references [Source:1 | Title: ... | URL: ... | Date: ... | Confidence: ...]
-  const sourcePattern = /\[Source:(\d+)\s*\|\s*Title:\s*([^|]+)\s*\|\s*URL:\s*([^|]+)\s*\|\s*Date:\s*([^|]+)\s*\|\s*Confidence:\s*([^\]]+)\]/g;
+  // First extract source references with simplified format: [Source:1] Title - URL (Date)
+  const sourcePattern = /\[Source:(\d+)\]\s*([^-\n]+)\s*-\s*([^\s\n]+)\s*\(([^)]+)\)/g;
   const sources: Map<string, Citation> = new Map();
   
   let sourceMatch;
   while ((sourceMatch = sourcePattern.exec(text)) !== null) {
-    const [, sourceId, title, url, date, confidence] = sourceMatch;
+    const [, sourceId, title, url, date] = sourceMatch;
     
     const citation: Citation = {
       id: `inline-citation-${sourceId}`,
       source: title.trim(),
       type: determineSourceType(url.trim()),
       content: `Information from ${title.trim()}`,
-      relevance: parseConfidence(confidence.trim()),
+      relevance: 0.8,
       url: url.trim(),
       timestamp: parseDate(date.trim()),
-      confidence: parseConfidence(confidence.trim()),
+      confidence: 0.7,
       quality: calculateQualityFromUrl(url.trim()),
-      highlightedText: '' // Will be filled when we find the cited text
+      highlightedText: ''
     };
     
     sources.set(sourceId, citation);
     extractedCitations.push(citation);
   }
   
-  // Remove source references from text for processing
-  let cleanText = text.replace(sourcePattern, '').trim();
+  // Also try the old format for backwards compatibility
+  const oldSourcePattern = /\[Source:(\d+)\s*\|\s*Title:\s*([^|]+)\s*\|\s*URL:\s*([^|]+)\s*\|\s*Date:\s*([^|]+)\s*\|\s*Confidence:\s*([^\]]+)\]/g;
   
-  // Now parse inline citations [CITE:X]text[/CITE:X]
+  let oldSourceMatch;
+  while ((oldSourceMatch = oldSourcePattern.exec(text)) !== null) {
+    const [, sourceId, title, url, date, confidence] = oldSourceMatch;
+    
+    if (!sources.has(sourceId)) {
+      const citation: Citation = {
+        id: `inline-citation-${sourceId}`,
+        source: title.trim(),
+        type: determineSourceType(url.trim()),
+        content: `Information from ${title.trim()}`,
+        relevance: parseConfidence(confidence.trim()),
+        url: url.trim(),
+        timestamp: parseDate(date.trim()),
+        confidence: parseConfidence(confidence.trim()),
+        quality: calculateQualityFromUrl(url.trim()),
+        highlightedText: ''
+      };
+      
+      sources.set(sourceId, citation);
+      extractedCitations.push(citation);
+    }
+  }
+  
+  // Remove source references from text for processing
+  let cleanText = text.replace(sourcePattern, '').replace(oldSourcePattern, '').trim();
+  
+  // Try wrapped format first: [CITE:X]text[/CITE:X]
+  const wrappedCitePattern = /\[CITE:(\d+)\](.*?)\[\/CITE:\d+\]/g;
+  // let wrappedMatch;
+  let hasWrappedCitations = false;
+  
+  // Check if we have wrapped citations
+  const testResult = wrappedCitePattern.exec(cleanText);
+  if (testResult !== null) {
+    hasWrappedCitations = true;
+  }
+  
+  if (hasWrappedCitations) {
+    // Use the existing wrapped citation logic
+    return parseWrappedCitations(cleanText, sources, extractedCitations);
+  }
+  
+  // Handle simple end-of-sentence citations: [CITE:X]
+  return parseEndOfSentenceCitations(cleanText, sources, extractedCitations);
+}
+
+/**
+ * Parse wrapped citations [CITE:X]text[/CITE:X]
+ */
+function parseWrappedCitations(
+  cleanText: string, 
+  sources: Map<string, Citation>, 
+  extractedCitations: Citation[]
+): {
+  segments: HighlightedText[];
+  references: CitationReference[];
+} {
+  const segments: HighlightedText[] = [];
+  const references: CitationReference[] = [];
+  
   const inlineCitePattern = /\[CITE:(\d+)\](.*?)\[\/CITE:\d+\]/g;
+  const citationIds = new Set<string>();
   let lastIndex = 0;
   let match;
   
+  // Collect citation IDs for fallbacks
+  let tempMatch;
+  const tempPattern = /\[CITE:(\d+)\]/g;
+  while ((tempMatch = tempPattern.exec(cleanText)) !== null) {
+    citationIds.add(tempMatch[1]);
+  }
+  
+  // Create fallback citations
+  citationIds.forEach(citationId => {
+    if (!sources.has(citationId)) {
+      const fallbackCitation: Citation = {
+        id: `inline-citation-${citationId}`,
+        source: `Research Source ${citationId}`,
+        type: 'web',
+        content: `Referenced information from source ${citationId}`,
+        relevance: 0.7,
+        url: `#source-${citationId}`,
+        timestamp: new Date(),
+        confidence: 0.6,
+        quality: 0.5,
+        highlightedText: ''
+      };
+      sources.set(citationId, fallbackCitation);
+      extractedCitations.push(fallbackCitation);
+    }
+  });
+  
+  // Process wrapped citations
   while ((match = inlineCitePattern.exec(cleanText)) !== null) {
     const [fullMatch, sourceId, citedText] = match;
     
-    // Add non-highlighted text before this citation
     if (match.index > lastIndex) {
       const beforeText = cleanText.substring(lastIndex, match.index);
       if (beforeText.trim()) {
@@ -92,10 +179,8 @@ function parseInlineCitations(text: string): {
       }
     }
     
-    // Add the highlighted cited text
     const citation = sources.get(sourceId);
     if (citation) {
-      // Update the citation with the actual highlighted text
       citation.highlightedText = citedText.trim();
       
       segments.push({
@@ -112,7 +197,6 @@ function parseInlineCitations(text: string): {
         highlightEnd: match.index + citedText.length
       });
     } else {
-      // If no source found, treat as regular text
       segments.push({
         text: citedText,
         isHighlighted: false
@@ -122,7 +206,6 @@ function parseInlineCitations(text: string): {
     lastIndex = match.index + fullMatch.length;
   }
   
-  // Add remaining text
   if (lastIndex < cleanText.length) {
     const remainingText = cleanText.substring(lastIndex);
     if (remainingText.trim()) {
@@ -133,9 +216,158 @@ function parseInlineCitations(text: string): {
     }
   }
   
-  // If we found inline citations, also store the extracted citations globally
-  if (segments.some(s => s.isHighlighted)) {
-    // Store extracted citations for use by CitationRenderer
+  if (extractedCitations.length > 0) {
+    (globalThis as any).__extractedCitations = extractedCitations;
+  }
+  
+  return { segments, references };
+}
+
+/**
+ * Parse end-of-sentence citations: [CITE:X] and highlight preceding text
+ */
+function parseEndOfSentenceCitations(
+  cleanText: string, 
+  sources: Map<string, Citation>, 
+  extractedCitations: Citation[]
+): {
+  segments: HighlightedText[];
+  references: CitationReference[];
+} {
+  const segments: HighlightedText[] = [];
+  const references: CitationReference[] = [];
+  
+  // Find all citation markers [CITE:X]
+  const citationPattern = /\[CITE:(\d+)\]/g;
+  const citationMatches: Array<{match: RegExpExecArray, sourceId: string, index: number}> = [];
+  let match;
+  
+  while ((match = citationPattern.exec(cleanText)) !== null) {
+    citationMatches.push({
+      match,
+      sourceId: match[1],
+      index: match.index!
+    });
+  }
+  
+  // Create fallback citations for missing sources
+  const citationIds = new Set(citationMatches.map(m => m.sourceId));
+  citationIds.forEach(citationId => {
+    if (!sources.has(citationId)) {
+      const fallbackCitation: Citation = {
+        id: `inline-citation-${citationId}`,
+        source: `Research Source ${citationId}`,
+        type: 'web',
+        content: `Referenced information from source ${citationId}`,
+        relevance: 0.7,
+        url: `#source-${citationId}`,
+        timestamp: new Date(),
+        confidence: 0.6,
+        quality: 0.5,
+        highlightedText: ''
+      };
+      sources.set(citationId, fallbackCitation);
+      extractedCitations.push(fallbackCitation);
+    }
+  });
+  
+  if (citationMatches.length === 0) {
+    // No citations found, return original text
+    segments.push({
+      text: cleanText,
+      isHighlighted: false
+    });
+    return { segments, references };
+  }
+  
+  // Remove citation markers to get clean text for processing
+  const textWithoutCitations = cleanText.replace(citationPattern, '');
+  
+  // Sort citations by position
+  citationMatches.sort((a, b) => a.index - b.index);
+  
+  let processedIndex = 0;
+  
+  citationMatches.forEach((citationMatch, citationIndex) => {
+    const { sourceId, index: citationStart } = citationMatch;
+    
+    // Calculate where this citation's text should start
+    // Find sentence boundaries - look for the start of the sentence this citation belongs to
+    const textBeforeCitation = cleanText.substring(0, citationStart);
+    
+    // Find the start of the current sentence
+    const sentenceBreaks = /[.!?]\s+|^|\n\s*•\s*/g;
+    let sentenceStart = 0;
+    let sentenceMatch;
+    
+    while ((sentenceMatch = sentenceBreaks.exec(textBeforeCitation)) !== null) {
+      sentenceStart = sentenceMatch.index + sentenceMatch[0].length;
+    }
+    
+    // Adjust for processed text (account for removed citations)
+    let adjustedSentenceStart = sentenceStart;
+    let adjustedCitationStart = citationStart;
+    
+    // Count citations before this one to adjust positions
+    const citationsBefore = citationMatches.slice(0, citationIndex);
+    citationsBefore.forEach(prevCitation => {
+      if (prevCitation.index < sentenceStart) {
+        adjustedSentenceStart -= prevCitation.match[0].length;
+      }
+      if (prevCitation.index < citationStart) {
+        adjustedCitationStart -= prevCitation.match[0].length;
+      }
+    });
+    
+    // Add any non-highlighted text before this sentence
+    if (adjustedSentenceStart > processedIndex) {
+      const beforeText = textWithoutCitations.substring(processedIndex, adjustedSentenceStart).trim();
+      if (beforeText) {
+        segments.push({
+          text: beforeText,
+          isHighlighted: false
+        });
+      }
+    }
+    
+    // Extract the sentence/phrase to highlight
+    const textToHighlight = textWithoutCitations.substring(adjustedSentenceStart, adjustedCitationStart).trim();
+    
+    // Add the highlighted text if we have a valid citation
+    const citation = sources.get(sourceId);
+    if (citation && textToHighlight) {
+      citation.highlightedText = textToHighlight;
+      
+      segments.push({
+        text: textToHighlight,
+        isHighlighted: true,
+        citationId: citation.id
+      });
+      
+      references.push({
+        citationId: citation.id,
+        inlineText: textToHighlight,
+        position: adjustedSentenceStart,
+        highlightStart: adjustedSentenceStart,
+        highlightEnd: adjustedCitationStart
+      });
+    }
+    
+    processedIndex = adjustedCitationStart;
+  });
+  
+  // Add any remaining text after the last citation
+  if (processedIndex < textWithoutCitations.length) {
+    const remainingText = textWithoutCitations.substring(processedIndex).trim();
+    if (remainingText) {
+      segments.push({
+        text: remainingText,
+        isHighlighted: false
+      });
+    }
+  }
+  
+  if (extractedCitations.length > 0) {
     (globalThis as any).__extractedCitations = extractedCitations;
   }
   
@@ -476,4 +708,43 @@ export function createSourceDiscovery(
     context,
     searchMethod
   };
+}
+
+// Debug function to test citation parsing
+export function testCitationParsing() {
+  const testText = `• *The Legend of Zelda: Breath of the Wild*: Rated E10+ for Everyone 10 and older [CITE:1]. The content descriptors include Fantasy Violence and Mild Suggestive Themes [CITE:1].
+
+• *The Legend of Zelda: Tears of the Kingdom*: Rated E10+ for Everyone 10 and older [CITE:2]. The content descriptors include Fantasy Violence and Mild Suggestive Themes [CITE:2].
+
+• *The Legend of Zelda: Ocarina of Time*: Rated E for Everyone [CITE:3]. The content descriptors include Animated Violence and Animated Blood [CITE:3].`;
+
+  console.log('Testing citation parsing...');
+  console.log('Input text:', testText);
+  
+  const result = parseTextWithHighlighting(testText, []);
+  console.log('Parsed result:', result);
+  console.log('Number of highlighted segments:', result.segments.filter((s: HighlightedText) => s.isHighlighted).length);
+  
+  // Log each segment
+  result.segments.forEach((segment: HighlightedText, index: number) => {
+    console.log(`Segment ${index + 1}:`, {
+      text: segment.text.substring(0, 50) + (segment.text.length > 50 ? '...' : ''),
+      isHighlighted: segment.isHighlighted,
+      citationId: segment.citationId || 'none'
+    });
+  });
+  
+  // Check if citations were created globally
+  const extractedCitations = (globalThis as any).__extractedCitations || [];
+  console.log('Number of extracted citations:', extractedCitations.length);
+  
+  extractedCitations.forEach((citation: Citation, index: number) => {
+    console.log(`Citation ${index + 1}:`, {
+      source: citation.source,
+      url: citation.url,
+      highlightedText: citation.highlightedText
+    });
+  });
+  
+  return { result, extractedCitations };
 } 
