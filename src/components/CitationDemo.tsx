@@ -197,6 +197,17 @@ const CitationDemo: React.FC = () => {
           Enter your Google AI API key to start chatting with real citations
         </p>
         
+        {/* Security Warning */}
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
+          <div className="flex items-center">
+            <AlertCircle className="w-4 h-4 text-yellow-600 mr-2" />
+            <p className="text-xs text-yellow-800 text-left">
+              <strong>Security Note:</strong> This is a demo app. Your API key will be visible in browser network logs. 
+              Only use for testing purposes.
+            </p>
+          </div>
+        </div>
+        
         <div className="space-y-3">
           <input
             type="password"
