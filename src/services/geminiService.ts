@@ -1,7 +1,7 @@
 /**
  * 🤖 Gemini AI Service - Real AI Chat with Citations
  * 
- * Integrates with Google's Gemini 2.0 Flash model to provide
+ * Integrates with Google's Gemini 2.0 Flash model (standard version) to provide
  * AI responses with proper source citations and fact-checking.
  */
 
@@ -32,7 +32,7 @@ class GeminiService {
 
   constructor(config: GeminiConfig) {
     this.config = {
-      model: 'gemini-2.0-flash-exp',
+      model: 'gemini-2.0-flash',
       temperature: 0.7,
       maxTokens: 2048,
       ...config
@@ -179,7 +179,7 @@ Remember:
       content: this.cleanResponseContent(content),
       citations,
       confidence: this.calculateResponseConfidence(data),
-      model: this.config.model || 'gemini-2.0-flash-exp',
+      model: this.config.model || 'gemini-2.0-flash',
       usage: this.extractUsageInfo(data)
     };
   }
