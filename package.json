@@ -1,26 +1,18 @@
 {
-  "name": "beta-land-asu",
+  "name": "citations-demo",
   "version": "1.0.0",
   "private": true,
   "homepage": "https://danielennis11111.github.io/citations",
   "dependencies": {
-    "@google/genai": "^1.4.0",
-    "@huggingface/transformers": "^3.5.2",
     "@tailwindcss/typography": "^0.5.16",
     "@types/node": "^16.18.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "@types/react-router-dom": "^5.3.3",
-    "buffer": "^6.0.3",
     "lucide-react": "^0.263.1",
-    "openai": "^5.1.1",
-    "pdfjs-dist": "^5.3.31",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.6.2",
     "react-scripts": "5.0.1",
-    "remark-gfm": "^4.0.1",
     "typescript": "^4.9.0"
   },
   "scripts": {
@@ -55,4 +47,4 @@
     "postcss": "^8.4.0",
     "tailwindcss": "^3.3.0"
   }
-}
+} 
