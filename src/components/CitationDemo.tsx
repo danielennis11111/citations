@@ -163,7 +163,7 @@ const CitationDemo: React.FC = () => {
   const [selectedDiscovery, setSelectedDiscovery] = useState<RAGDiscovery | null>(null);
   
   // Parse the example response to highlight citations
-  const { segments, references } = parseTextWithHighlighting(exampleResponse, mockCitations, mockDiscoveries);
+  const { segments } = parseTextWithHighlighting(exampleResponse, mockCitations, mockDiscoveries);
   
   const handleDiscoveryClick = (discovery: RAGDiscovery) => {
     setSelectedDiscovery(discovery);
