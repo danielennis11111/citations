@@ -33,21 +33,9 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
     delete (globalThis as any).__extractedCitations;
   }
   
-  // Debug logging to understand why we're falling back to demo data
-  console.log('=== CITATION RENDERER DEBUG ===');
-  console.log('Content length:', content.length);
-  console.log('Content preview:', content.substring(0, 300) + '...');
-  console.log('Input citations:', citations.length, citations);
-  console.log('Extracted citations:', allCitations.length, allCitations);
-  console.log('Has [CITE:] markers:', /\[CITE:\d+\]/.test(content));
-  console.log('Has source markers:', /\[Source:/i.test(content));
-  
   // Fallback: if no citations found but we have content that looks like it should have citations,
   // create some test citations for demonstration
   if (allCitations.length === 0 && citations.length === 0 && content.length > 100) {
-    console.warn('🚨 FALLING BACK TO DEMO CITATIONS - Real citations not found!');
-    console.warn('This means the AI response parsing failed. Check Gemini Service logs.');
-    
     const testCitation: Citation = {
       id: 'test-citation-1',
       source: 'Example Source',
@@ -71,9 +59,6 @@ const CitationRenderer: React.FC<CitationRendererProps> = ({
       }
     }
   }
-  
-  console.log('Final citations count:', allCitations.length);
-  console.log('=== END CITATION RENDERER DEBUG ===');
   
   // Enhanced content formatting with markdown support
   const formattedContent = enhanceMarkdownFormatting(content);

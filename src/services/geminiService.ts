@@ -50,19 +50,6 @@ class GeminiService {
     try {
       const prompt = this.buildPromptWithCitations(message, context, includeCitations);
       
-      // Log prompt info for debugging
-      console.log('Prompt length:', prompt.length, 'characters');
-      if (prompt.length > 10000) {
-        console.warn('Very long prompt detected, this might cause delays');
-      }
-      
-      // Create AbortController for timeout
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-      
-      console.log('Making Gemini API request...');
-      const startTime = Date.now();
-      
       const response = await fetch(
         `${this.baseUrl}/${this.config.model}:generateContent?key=${this.config.apiKey}`,
         {
@@ -91,37 +78,19 @@ class GeminiService {
                 threshold: 'BLOCK_MEDIUM_AND_ABOVE'
               }
             ]
-          }),
-          signal: controller.signal
+          })
         }
       );
-      
-      clearTimeout(timeoutId);
-      const requestTime = Date.now() - startTime;
-      console.log(`API request completed in ${requestTime}ms`);
 
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Gemini API Error Response:', errorText);
-        throw new Error(`Gemini API error: ${response.status} ${response.statusText} - ${errorText}`);
+        throw new Error(`Gemini API error: ${response.status} ${response.statusText}`);
       }
 
       const data = await response.json();
-      
-      // Check for error in response body (sometimes API returns 200 but with error)
-      if (data.error) {
-        console.error('Gemini API returned error:', data.error);
-        throw new Error(`Gemini API error: ${data.error.message || 'Unknown error'}`);
-      }
-      
       return this.parseGeminiResponse(data, message);
     } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        console.error('Gemini API request timed out after 30 seconds');
-        throw new Error('Request timed out. Please try again with a shorter message.');
-      }
       console.error('Gemini API Error:', error);
-      throw new Error(`Failed to get response from Gemini: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(`Failed to get response from Gemini: ${error}`);
     }
   }
 
@@ -203,25 +172,8 @@ Remember:
    * Parse Gemini's response and extract citations
    */
   private parseGeminiResponse(data: any, originalQuery: string): GeminiResponse {
-    // Debug logging to understand the response structure
-    console.log('=== GEMINI API DEBUG ===');
-    console.log('Full API Response:', JSON.stringify(data, null, 2));
-    
     const content = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-    console.log('Extracted content:', content);
-    console.log('Content length:', content.length);
-    
-    if (!content) {
-      console.warn('No content found in response! Response structure:');
-      console.warn('- data.candidates:', data.candidates);
-      console.warn('- candidates[0]:', data.candidates?.[0]);
-      console.warn('- content:', data.candidates?.[0]?.content);
-      console.warn('- parts:', data.candidates?.[0]?.content?.parts);
-    }
-    
     const citations = this.extractCitationsFromResponse(content, originalQuery);
-    console.log('Extracted citations:', citations);
-    console.log('=== END DEBUG ===');
     
     return {
       content: this.cleanResponseContent(content),
@@ -237,58 +189,30 @@ Remember:
    */
   private extractCitationsFromResponse(content: string, query: string): Citation[] {
     const citations: Citation[] = [];
-    
-    // Look for the simple format asked for in the prompt: [Source:1] Title - URL (Date)
-    const sourceListPattern = /\[Source:(\d+)\]\s*([^-]+?)\s*-\s*(https?:\/\/[^\s)]+)\s*\(([^)]+)\)/g;
+    const sourcePattern = /\[Source:\s*([^|]+)\s*\|\s*URL:\s*([^|]+)\s*\|\s*Date:\s*([^|]+)\s*\|\s*Confidence:\s*([^\]]+)\]/g;
     
     let match;
     let citationId = 1;
 
-    console.log('Searching for citation pattern in content:', content.substring(content.length - 500));
-
-    while ((match = sourceListPattern.exec(content)) !== null) {
-      const [fullMatch, sourceNum, title, url, date] = match;
-      console.log('Found citation:', { fullMatch, sourceNum, title, url, date });
+    while ((match = sourcePattern.exec(content)) !== null) {
+      const [fullMatch, title, url, date, confidence] = match;
       
       citations.push({
-        id: `citation-${sourceNum}`,
+        id: `citation-${citationId++}`,
         source: title.trim(),
         type: this.determineSourceType(url.trim()),
         content: `Information from ${title.trim()}`,
-        relevance: 0.8,
+        relevance: this.calculateRelevance(confidence.trim()),
         url: url.trim(),
         timestamp: this.parseDate(date.trim()),
-        confidence: 0.8,
+        confidence: this.parseConfidence(confidence.trim()),
         quality: this.calculateQuality(title.trim(), url.trim()),
-        highlightedText: this.extractRelevantText(content, `[CITE:${sourceNum}]`)
+        highlightedText: this.extractRelevantText(content, fullMatch)
       });
     }
 
-    // Fallback: Look for the old complex format (in case Gemini still uses it)
+    // If no explicit citations found, try to extract URLs and create basic citations
     if (citations.length === 0) {
-      const oldSourcePattern = /\[Source:\s*([^|]+)\s*\|\s*URL:\s*([^|]+)\s*\|\s*Date:\s*([^|]+)\s*\|\s*Confidence:\s*([^\]]+)\]/g;
-      
-      while ((match = oldSourcePattern.exec(content)) !== null) {
-        const [fullMatch, title, url, date, confidence] = match;
-        
-        citations.push({
-          id: `citation-${citationId++}`,
-          source: title.trim(),
-          type: this.determineSourceType(url.trim()),
-          content: `Information from ${title.trim()}`,
-          relevance: this.calculateRelevance(confidence.trim()),
-          url: url.trim(),
-          timestamp: this.parseDate(date.trim()),
-          confidence: this.parseConfidence(confidence.trim()),
-          quality: this.calculateQuality(title.trim(), url.trim()),
-          highlightedText: this.extractRelevantText(content, fullMatch)
-        });
-      }
-    }
-
-    // If still no explicit citations found, try to extract URLs and create basic citations
-    if (citations.length === 0) {
-      console.log('No formatted citations found, looking for standalone URLs...');
       const urlPattern = /https?:\/\/[^\s)]+/g;
       const urls = content.match(urlPattern) || [];
       
@@ -307,7 +231,6 @@ Remember:
       });
     }
 
-    console.log(`Final extracted citations: ${citations.length}`);
     return citations;
   }
 
