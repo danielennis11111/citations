@@ -390,15 +390,15 @@ const CitationDemo: React.FC = () => {
                   <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-200">
                     {message.role === 'user' ? (
                       <img 
-                        src="/IMG_9725.jpg" 
+                        src="/citations/user-avatar.jpg"
                         alt="User avatar" 
                         className="w-full h-full object-cover"
                       />
                     ) : (
                       <img 
-                        src="/Image_fx (12).png" 
+                        src="/citations/ai-avatar.png"
                         alt="AI assistant avatar" 
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover object-center"
                       />
                     )}
                   </div>
